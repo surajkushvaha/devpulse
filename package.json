@@ -1,0 +1,23 @@
+{
+  "name": "devpulse",
+  "version": "1.0.0",
+  "description": "A lightweight, client-side personal feed aggregator for developers",
+  "main": "devpulse-proxy.js",
+  "scripts": {
+    "start": "node devpulse-proxy.js",
+    "dev": "node devpulse-proxy.js"
+  },
+  "keywords": [
+    "dashboard",
+    "aggregator",
+    "hacker-news",
+    "reddit",
+    "github",
+    "games"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
