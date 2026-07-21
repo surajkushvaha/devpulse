@@ -17,16 +17,18 @@ All data is fetched client-side, nothing is stored or sent anywhere except to th
 2. Click **refresh all** to manually update all feeds, or enable **auto-refresh every 15 min**
 3. Click individual refresh buttons (↻) to update a specific panel
 
-## Local Proxy Setup (Optional)
+## Local Proxy Setup
 
-Reddit and GamerPower require a CORS workaround. For better performance and reliability:
+Reddit and GamerPower require a CORS workaround. For best results:
 
 1. Ensure Node.js is installed
 2. Run the local proxy server:
    ```bash
    node devpulse-proxy.js
    ```
-3. Open `devpulse.html` — Reddit and Free Game Deals panels will now use your local proxy instead of a public relay
+3. Open your browser to `http://localhost:8787` or `http://localhost:8787/devpulse.html`
+
+This serves the page from the same local server as the proxy, which avoids browser restrictions that can still occur when opening `devpulse.html` directly from the file system.
 
 You'll see a small label next to Reddit and Free Game Deals indicating which source is active (green "local proxy" vs gray "public relay").
 
