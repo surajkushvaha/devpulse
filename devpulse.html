@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DevPulse — Personal Feed</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --panel:#f5f5f7;
+    --border:rgba(29,29,31,0.09);
+    --text:#1d1d1f;
+    --muted:rgba(29,29,31,0.55);
+    --muted-2:rgba(29,29,31,0.32);
+    --accent:#0066cc;
+    --accent-wash:rgba(0,102,204,0.08);
+    --alert:#d5342a;
+    --radius:14px;
+    --radius-sm:8px;
+    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html,body{
+    margin:0; padding:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    min-height:100vh;
+  }
+
+  ::selection{ background:var(--accent); color:#fff; }
+
+  a{ color:inherit; text-decoration:none; }
+
+  code{ font-family:var(--mono); color:var(--muted); background:var(--panel); padding:1px 5px; border-radius:4px; }
+
+  /* ---------- Header ---------- */
+  header{
+    position:sticky; top:0; z-index:10;
+    background:rgba(255,255,255,0.85);
+    backdrop-filter: blur(10px);
+    border-bottom:1px solid var(--border);
+    padding:22px 28px;
+  }
+
+  .header-row{
+    display:flex; align-items:baseline; justify-content:space-between;
+    flex-wrap:wrap; gap:12px;
+    max-width:1180px; margin:0 auto;
+  }
+
+  .brand{ display:flex; align-items:baseline; gap:10px; }
+
+  .brand h1{
+    font-size:15px; letter-spacing:.01em; margin:0;
+    font-weight:600;
+  }
+
+  .brand .dot{
+    width:5px; height:5px; border-radius:50%;
+    background:var(--accent); display:inline-block;
+    animation:pulse 2.2s ease-in-out infinite;
+  }
+
+  @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.3; } }
+
+  .brand .eyebrow{
+    font-size:12.5px; color:var(--muted);
+  }
+
+  .status{
+    font-family:var(--mono); font-size:11px; color:var(--muted);
+    display:flex; align-items:center; gap:16px;
+  }
+
+  #clock{ color:var(--accent); font-weight:600; }
+
+  .controls{
+    display:flex; align-items:center; gap:18px;
+    font-size:12px; color:var(--muted);
+    max-width:1180px; margin:12px auto 0;
+  }
+
+  button.refresh-all{
+    font-family:inherit; font-size:12px;
+    background:var(--panel); color:var(--text);
+    border:none; padding:6px 14px; cursor:pointer;
+    border-radius:20px;
+    transition:background .15s, color .15s;
+  }
+  button.refresh-all:hover{ background:var(--accent-wash); color:var(--accent); }
+  button.refresh-all:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+  label.auto{ display:flex; align-items:center; gap:6px; cursor:pointer; user-select:none; }
+  input[type=checkbox]{ accent-color:var(--accent); }
+
+  /* ---------- Grid ---------- */
+  main{
+    padding:36px 28px 70px;
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:16px;
+    max-width:1180px;
+    margin:0 auto;
+  }
+
+  @media (max-width: 860px){
+    main{ grid-template-columns:1fr; padding:26px 16px 50px; }
+    .header-row{ flex-direction:column; align-items:flex-start; }
+  }
+
+  .panel{
+    background:var(--panel);
+    border-radius:var(--radius);
+    display:flex; flex-direction:column;
+    min-height:340px; max-height:520px;
+    overflow:hidden;
+  }
+
+  .panel-head{
+    display:flex; align-items:baseline; justify-content:space-between;
+    padding:18px 20px 12px;
+    flex-wrap:wrap; gap:6px;
+  }
+
+  .panel-title h2{
+    font-size:13px; margin:0; letter-spacing:.01em;
+    font-weight:600; color:var(--text);
+  }
+
+  .panel-src{
+    font-size:11px; color:var(--muted-2);
+  }
+
+  .panel-refresh{
+    background:none; border:none; color:var(--muted-2);
+    cursor:pointer; font-size:14px;
+    padding:0 2px; border-radius:4px;
+    transition:color .15s;
+  }
+  .panel-refresh:hover{ color:var(--accent); }
+
+  .panel-body{
+    overflow-y:auto; flex:1;
+    padding:2px 0 8px;
+  }
+
+  .panel-body::-webkit-scrollbar{ width:6px; }
+  .panel-body::-webkit-scrollbar-thumb{ background:rgba(29,29,31,0.15); border-radius:4px; }
+  .panel-body::-webkit-scrollbar-track{ background:transparent; }
+
+  .item{
+    display:block; margin:2px 8px; padding:9px 12px;
+    border-radius:var(--radius-sm);
+    transition:background .12s;
+  }
+  .item:hover{ background:rgba(29,29,31,0.05); }
+
+  .item-title{
+    font-size:13px; line-height:1.5; color:var(--text);
+    margin-bottom:4px;
+  }
+
+  .item-meta{
+    font-family:var(--mono); font-size:10.5px; color:var(--muted);
+    display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+  }
+
+  .item-meta .sep{ color:var(--muted-2); }
+
+  .free-tag{ color:var(--accent); font-weight:600; }
+
+  /* ---------- States ---------- */
+  .loading, .empty, .error{
+    padding:20px 20px; font-family:var(--mono); font-size:12px; color:var(--muted);
+  }
+
+  .error{ color:var(--alert); }
+  .error a{ color:var(--accent); text-decoration:underline; }
+
+  .skeleton{
+    height:12px; border-radius:4px;
+    background:linear-gradient(90deg, #eaeaec 25%, #e0e0e3 37%, #eaeaec 63%);
+    background-size:400% 100%;
+    animation:shimmer 1.4s ease infinite;
+    margin:12px 20px;
+  }
+  @keyframes shimmer{ 0%{ background-position:100% 0; } 100%{ background-position:0 0; } }
+
+  footer{
+    max-width:1180px; margin:0 auto; padding:0 28px 50px;
+    font-size:11.5px; color:var(--muted-2);
+    line-height:1.8;
+  }
+  footer a{ color:var(--muted); text-decoration:underline; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation:none !important; transition:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-row">
+    <div class="brand">
+      <span class="dot"></span>
+      <h1>DevPulse</h1>
+      <span class="eyebrow">personal feed</span>
+    </div>
+    <div class="status">
+      <span id="clock">--:--:--</span>
+      <span id="last-sync">not synced yet</span>
+    </div>
+  </div>
+  <div class="controls">
+    <button class="refresh-all" id="refresh-all">refresh all</button>
+    <label class="auto">
+      <input type="checkbox" id="auto-refresh">
+      auto-refresh every 15 min
+    </label>
+  </div>
+</header>
+
+<main>
+
+  <section class="panel" id="panel-hn">
+    <div class="panel-head">
+      <div class="panel-title"><h2>Hacker News</h2></div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="panel-src">top stories</span>
+        <button class="panel-refresh" data-target="hn" title="Refresh">↻</button>
+      </div>
+    </div>
+    <div class="panel-body" id="body-hn"></div>
+  </section>
+
+  <section class="panel" id="panel-reddit">
+    <div class="panel-head">
+      <div class="panel-title"><h2>Reddit</h2></div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="panel-src">r/programming + r/webdev</span>
+        <span class="panel-src" id="badge-reddit"></span>
+        <button class="panel-refresh" data-target="reddit" title="Refresh">↻</button>
+      </div>
+    </div>
+    <div class="panel-body" id="body-reddit"></div>
+  </section>
+
+  <section class="panel" id="panel-github">
+    <div class="panel-head">
+      <div class="panel-title"><h2>GitHub Trending</h2></div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="panel-src">stars this week</span>
+        <button class="panel-refresh" data-target="github" title="Refresh">↻</button>
+      </div>
+    </div>
+    <div class="panel-body" id="body-github"></div>
+  </section>
+
+  <section class="panel" id="panel-games">
+    <div class="panel-head">
+      <div class="panel-title"><h2>Free Game Deals</h2></div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="panel-src">epic + steam</span>
+        <span class="panel-src" id="badge-games"></span>
+        <button class="panel-refresh" data-target="games" title="Refresh">↻</button>
+      </div>
+    </div>
+    <div class="panel-body" id="body-games"></div>
+  </section>
+
+</main>
+
+<footer>
+  Runs entirely client-side — nothing is stored or sent anywhere but to the sources below.<br>
+  Hacker News and GitHub are called directly. Reddit and GamerPower need a CORS workaround: run
+  <code>node devpulse-proxy.js</code> (same folder as this file) before opening this page and those two
+  panels will use your own local proxy instead of a public relay — the small label next to each shows
+  which one is active.<br>
+  Not affiliated with Anthropic, Reddit, or GamerPower. Built for personal use.
+</footer>
+
+<script>
+(function(){
+
+  function tickClock(){
+    const el = document.getElementById('clock');
+    el.textContent = new Date().toLocaleTimeString([], { hour12:false });
+  }
+  tickClock();
+  setInterval(tickClock, 1000);
+
+  function setSynced(){
+    document.getElementById('last-sync').textContent =
+      'synced ' + new Date().toLocaleTimeString([], { hour12:false });
+  }
+
+  function timeAgo(unixSeconds){
+    const diff = Math.floor(Date.now()/1000) - unixSeconds;
+    if (diff < 3600) return Math.max(1, Math.floor(diff/60)) + 'm';
+    if (diff < 86400) return Math.floor(diff/3600) + 'h';
+    return Math.floor(diff/86400) + 'd';
+  }
+
+  function escapeHtml(str){
+    return String(str || '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  function showSkeleton(bodyEl, rows){
+    bodyEl.innerHTML = '';
+    for(let i=0;i<rows;i++){
+      const s = document.createElement('div');
+      s.className = 'skeleton';
+      s.style.width = (55 + Math.random()*30) + '%';
+      bodyEl.appendChild(s);
+    }
+  }
+
+  function showError(bodyEl, message, linkUrl, linkLabel){
+    bodyEl.innerHTML =
+      '<div class="error">' + escapeHtml(message) +
+      (linkUrl ? '<br><a href="' + linkUrl + '" target="_blank" rel="noopener">' + escapeHtml(linkLabel || 'Open source directly') + ' →</a>' : '') +
+      '</div>';
+  }
+
+  function showEmpty(bodyEl, message){
+    bodyEl.innerHTML = '<div class="empty">' + escapeHtml(message) + '</div>';
+  }
+
+  function updateSrcBadge(panel, via){
+    const el = document.getElementById('badge-' + panel);
+    if(!el) return;
+    el.textContent = via === 'local proxy' ? 'local proxy' : 'public relay';
+    el.style.color = via === 'local proxy' ? 'var(--accent)' : 'var(--muted-2)';
+  }
+
+  async function loadHN(){
+    const body = document.getElementById('body-hn');
+    showSkeleton(body, 8);
+    try{
+      const idsRes = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json');
+      if(!idsRes.ok) throw new Error('HTTP ' + idsRes.status);
+      const ids = (await idsRes.json()).slice(0, 15);
+      const items = await Promise.all(ids.map(id =>
+        fetch('https://hacker-news.firebaseio.com/v0/item/' + id + '.json').then(r => r.json())
+      ));
+      body.innerHTML = '';
+      items.filter(Boolean).forEach(it => {
+        const div = document.createElement('a');
+        div.className = 'item';
+        div.href = it.url || ('https://news.ycombinator.com/item?id=' + it.id);
+        div.target = '_blank'; div.rel = 'noopener';
+        div.innerHTML =
+          '<div class="item-title">' + escapeHtml(it.title) + '</div>' +
+          '<div class="item-meta"><span>' + (it.score||0) + ' pts</span><span class="sep">·</span>' +
+          '<span>' + (it.descendants||0) + ' comments</span><span class="sep">·</span>' +
+          '<span>' + timeAgo(it.time) + '</span></div>';
+        body.appendChild(div);
+      });
+      if(!items.length) showEmpty(body, 'No stories returned.');
+    }catch(e){
+      showError(body, 'Could not load Hacker News (' + e.message + ').', 'https://news.ycombinator.com', 'Open Hacker News');
+    }
+  }
+
+  const LOCAL_PROXY = 'http://localhost:8787';
+
+  function fetchWithTimeout(url, ms){
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), ms);
+    return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(id));
+  }
+
+  async function proxiedFetch(targetUrl){
+    const relays = [
+      'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl),
+      'https://corsproxy.io/?url=' + encodeURIComponent(targetUrl)
+    ];
+    let lastErr;
+    for (const relayUrl of relays){
+      try{
+        const res = await fetch(relayUrl);
+        if(!res.ok) throw new Error('HTTP ' + res.status);
+        return await res.json();
+      }catch(e){ lastErr = e; }
+    }
+    throw lastErr;
+  }
+
+  async function fetchViaLocalOrRelay(localPath, fallbackUrl){
+    try{
+      const res = await fetchWithTimeout(LOCAL_PROXY + localPath, 1200);
+      if(res.ok) return { data: await res.json(), via: 'local proxy' };
+    }catch(e){ /* local proxy not running — fall through */ }
+    const data = await proxiedFetch(fallbackUrl);
+    return { data, via: 'public relay' };
+  }
+
+  async function loadReddit(){
+    const body = document.getElementById('body-reddit');
+    showSkeleton(body, 8);
+    try{
+      const subs = ['programming', 'webdev'];
+      let via = 'local proxy';
+      const results = await Promise.all(subs.map(async sub => {
+        const r = await fetchViaLocalOrRelay(
+          `/reddit?sub=${sub}&limit=8`,
+          `https://www.reddit.com/r/${sub}/hot.json?limit=8`
+        );
+        if(r.via === 'public relay') via = 'public relay';
+        return r.data.data.children.map(c => c.data);
+      }));
+      const combined = results.flat()
+        .filter(p => !p.stickied)
+        .sort((a,b) => b.score - a.score);
+
+      body.innerHTML = '';
+      combined.forEach(p => {
+        const div = document.createElement('a');
+        div.className = 'item';
+        div.href = 'https://reddit.com' + p.permalink;
+        div.target = '_blank'; div.rel = 'noopener';
+        div.innerHTML =
+          '<div class="item-title">' + escapeHtml(p.title) + '</div>' +
+          '<div class="item-meta"><span>r/' + escapeHtml(p.subreddit) + '</span><span class="sep">·</span>' +
+          '<span>' + p.score + ' pts</span><span class="sep">·</span>' +
+          '<span>' + p.num_comments + ' comments</span><span class="sep">·</span>' +
+          '<span>' + timeAgo(p.created_utc) + '</span></div>';
+        body.appendChild(div);
+      });
+      if(!combined.length) showEmpty(body, 'No posts returned.');
+      updateSrcBadge('reddit', via);
+    }catch(e){
+      showError(body, 'Could not load Reddit (' + e.message + '). The CORS relay may be down.', 'https://reddit.com/r/programming', 'Open r/programming');
+    }
+  }
+
+  async function loadGitHub(){
+    const body = document.getElementById('body-github');
+    showSkeleton(body, 8);
+    try{
+      const since = new Date(Date.now() - 7*24*3600*1000).toISOString().slice(0,10);
+      const url = 'https://api.github.com/search/repositories?q=created:>' + since + '&sort=stars&order=desc&per_page=15';
+      const res = await fetch(url, { headers: { 'Accept': 'application/vnd.github+json' } });
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      body.innerHTML = '';
+      (data.items || []).forEach(repo => {
+        const div = document.createElement('a');
+        div.className = 'item';
+        div.href = repo.html_url;
+        div.target = '_blank'; div.rel = 'noopener';
+        div.innerHTML =
+          '<div class="item-title">' + escapeHtml(repo.full_name) + '</div>' +
+          '<div class="item-meta">' +
+          '<span>★ ' + repo.stargazers_count + '</span>' +
+          (repo.language ? '<span class="sep">·</span><span>' + escapeHtml(repo.language) + '</span>' : '') +
+          (repo.description ? '<span class="sep">·</span><span>' + escapeHtml(repo.description.slice(0,70)) + '</span>' : '') +
+          '</div>';
+        body.appendChild(div);
+      });
+      if(!(data.items||[]).length) showEmpty(body, 'No repos returned.');
+    }catch(e){
+      showError(body, 'Could not load GitHub trending (' + e.message + ').', 'https://github.com/trending', 'Open GitHub Trending');
+    }
+  }
+
+  async function loadGames(){
+    const body = document.getElementById('body-games');
+    showSkeleton(body, 6);
+    try{
+      const { data, via } = await fetchViaLocalOrRelay(
+        '/games?platform=epic-games-store+steam',
+        'https://www.gamerpower.com/api/filter?platform=epic-games-store+steam&type=game&sort-by=date'
+      );
+      body.innerHTML = '';
+      data.slice(0, 15).forEach(g => {
+        const div = document.createElement('a');
+        div.className = 'item';
+        div.href = g.open_giveaway_url || g.gamerpower_url;
+        div.target = '_blank'; div.rel = 'noopener';
+        div.innerHTML =
+          '<div class="item-title"><span class="free-tag">FREE</span> — ' + escapeHtml(g.title) + '</div>' +
+          '<div class="item-meta">' +
+          '<span>' + escapeHtml(g.platforms || g.platform || '') + '</span><span class="sep">·</span>' +
+          '<span>was ' + escapeHtml(g.worth || 'N/A') + '</span><span class="sep">·</span>' +
+          '<span>ends ' + escapeHtml(g.end_date === '2099-01-01 00:00:00' ? 'no fixed date' : (g.end_date||'').slice(0,10)) + '</span>' +
+          '</div>';
+        body.appendChild(div);
+      });
+      if(!data.length) showEmpty(body, 'No active giveaways right now.');
+      updateSrcBadge('games', via);
+    }catch(e){
+      showError(body, 'Could not load game deals (' + e.message + '). Both the local proxy and public relay failed.', 'https://www.gamerpower.com/giveaways', 'Open GamerPower');
+    }
+  }
+
+  const loaders = { hn: loadHN, reddit: loadReddit, github: loadGitHub, games: loadGames };
+
+  function refreshAll(){
+    Object.values(loaders).forEach(fn => fn());
+    setSynced();
+  }
+
+  document.getElementById('refresh-all').addEventListener('click', refreshAll);
+
+  document.querySelectorAll('.panel-refresh').forEach(btn => {
+    btn.addEventListener('click', () => {
+      loaders[btn.dataset.target]();
+      setSynced();
+    });
+  });
+
+  let autoTimer = null;
+  document.getElementById('auto-refresh').addEventListener('change', (e) => {
+    if(e.target.checked){
+      autoTimer = setInterval(refreshAll, 15*60*1000);
+    } else if(autoTimer){
+      clearInterval(autoTimer);
+    }
+  });
+
+  refreshAll();
+
+})();
+</script>
+
+</body>
+</html>

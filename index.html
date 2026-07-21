@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title data-id="th-modified">Board</title>
+<style>
+  :root{
+    --bg: #F5F4EF;
+    --paper: #FCFCFA;
+    --line: #E4E2D9;
+    --ink: #24261F;
+    --ink-soft: #6C6D62;
+    --ink-faint: #A3A398;
+    --blue: #3E6690;
+    --blue-bg: #E7EEF4;
+    --green: #4C7A4E;
+    --green-bg: #E9F1E7;
+    --amber: #B4792E;
+    --amber-bg: #F6EBDB;
+    --red: #B5453B;
+    --radius: 10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    min-height:100vh;
+  }
+  .wrap{
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 32px 24px 60px;
+  }
+  header{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  h1{
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .date{
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
+  }
+  .board{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 720px){
+    .board{ grid-template-columns: 1fr; }
+  }
+  .col{
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px;
+    min-height: 200px;
+    display:flex;
+    flex-direction:column;
+  }
+  .col-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom: 12px;
+    padding: 0 2px;
+  }
+  .col-title{
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .col[data-status="todo"] .col-title{ color: var(--ink-soft); }
+  .col[data-status="doing"] .col-title{ color: var(--blue); }
+  .col[data-status="done"] .col-title{ color: var(--green); }
+  .count{
+    font-size: 11px;
+    color: var(--ink-faint);
+    background: var(--bg);
+    border-radius: 20px;
+    padding: 1px 8px;
+    font-variant-numeric: tabular-nums;
+  }
+  .cards{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    gap: 8px;
+    min-height: 40px;
+  }
+  .cards.drag-over{
+    background: var(--bg);
+    border-radius: 8px;
+    outline: 1.5px dashed var(--line);
+  }
+  .card{
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    font-size: 14px;
+    line-height: 1.4;
+    cursor: grab;
+    position: relative;
+    transition: box-shadow 0.15s ease, transform 0.1s ease;
+  }
+  .card:hover{
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .card.dragging{
+    opacity: 0.4;
+  }
+  .col[data-status="done"] .card{
+    color: var(--ink-soft);
+  }
+  .col[data-status="done"] .card .txt{
+    text-decoration: line-through;
+    text-decoration-color: var(--ink-faint);
+  }
+  .card .txt{
+    outline: none;
+    word-break: break-word;
+  }
+  .card-row{
+    display:flex;
+    align-items:flex-start;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .card-btns{
+    display:flex;
+    gap: 4px;
+    flex-shrink:0;
+  }
+  .icon-btn{
+    background:none;
+    border:none;
+    cursor:pointer;
+    color: var(--ink-faint);
+    font-size: 13px;
+    padding: 0 2px;
+    line-height: 1;
+    border-radius: 4px;
+  }
+  .icon-btn:hover{ color: var(--red); }
+  .move-btn:hover{ color: var(--blue); }
+  .meta{
+    font-size: 11px;
+    color: var(--ink-faint);
+    margin-top: 4px;
+  }
+  .add-row{
+    margin-top: 10px;
+  }
+  .add-row input{
+    width: 100%;
+    border: 1px dashed var(--line);
+    background: transparent;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 13px;
+    color: var(--ink);
+    font-family: inherit;
+  }
+  .add-row input::placeholder{ color: var(--ink-faint); }
+  .add-row input:focus{
+    outline:none;
+    border-style: solid;
+    border-color: var(--ink-faint);
+  }
+  .empty{
+    font-size: 12px;
+    color: var(--ink-faint);
+    padding: 10px 2px;
+  }
+  footer{
+    margin-top: 22px;
+    font-size: 11px;
+    color: var(--ink-faint);
+    text-align:center;
+  }
+  .clear-done{
+    background:none;
+    border:none;
+    font-size: 11px;
+    color: var(--ink-faint);
+    cursor:pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .clear-done:hover{ color: var(--red); }
+</style>
+<meta property="og:title" content="Board" data-id="th-modified" ><meta name="description" content="kanban" data-id="th-modified" ><meta property="og:description" content="kanban" data-id="th-modified" ><meta property="og:image" content="https://tiiny.host/assets/logo-purple-bg.png" data-id="th-modified" ><meta property="og:image:width" content="1501" data-id="th-modified" ><meta property="og:image:height" content="1501" data-id="th-modified" ><meta property="og:image:type" content="image/png" data-id="th-modified" ><meta property="og:url" content="https://todokanban.tiiny.site/" data-id="th-modified" ><meta property="og:type" content="website" data-id="th-modified" ><script defer data-domain="todokanban.tiiny.site" src="https://analytics.tiiny.net/js/plausible.js"></script><script type="text/javascript" src="https://tiiny.host/ad-script.js"></script></head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Board</h1>
+    <span class="date" id="today"></span>
+  </header>
+
+  <div class="board" id="board">
+    <div class="col" data-status="todo">
+      <div class="col-head">
+        <span class="col-title">To do</span>
+        <span class="count" id="count-todo">0</span>
+      </div>
+      <div class="cards" id="cards-todo" data-status="todo"></div>
+      <div class="add-row">
+        <input type="text" placeholder="Add a task…" data-status="todo">
+      </div>
+    </div>
+
+    <div class="col" data-status="doing">
+      <div class="col-head">
+        <span class="col-title">Doing</span>
+        <span class="count" id="count-doing">0</span>
+      </div>
+      <div class="cards" id="cards-doing" data-status="doing"></div>
+      <div class="add-row">
+        <input type="text" placeholder="Add a task…" data-status="doing">
+      </div>
+    </div>
+
+    <div class="col" data-status="done">
+      <div class="col-head">
+        <span class="col-title">Done</span>
+        <span class="count" id="count-done">0</span>
+      </div>
+      <div class="cards" id="cards-done" data-status="done"></div>
+      <div class="add-row">
+        <input type="text" placeholder="Add a task…" data-status="done">
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span id="footer-msg">Drag cards between columns, or use the arrow to move them</span>
+    &nbsp;·&nbsp;
+    <button class="clear-done" id="clear-done">Clear done</button>
+  </footer>
+</div>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'kanban:tasks';
+  const STATUSES = ['todo','doing','done'];
+  let tasks = [];
+  let draggedId = null;
+
+  const todayEl = document.getElementById('today');
+  todayEl.textContent = new Date().toLocaleDateString(undefined, { weekday:'long', month:'short', day:'numeric' });
+
+  function uid(){
+    return 't' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+  }
+
+  async function load(){
+    try{
+      const res = await window.storage.get(STORAGE_KEY, false);
+      tasks = res && res.value ? JSON.parse(res.value) : [];
+    }catch(e){
+      tasks = [];
+    }
+    render();
+  }
+
+  async function save(){
+    try{
+      await window.storage.set(STORAGE_KEY, JSON.stringify(tasks), false);
+    }catch(e){
+      console.error('Could not save board', e);
+    }
+  }
+
+  function addTask(status, text){
+    text = text.trim();
+    if(!text) return;
+    tasks.push({ id: uid(), text, status, created: Date.now() });
+    save();
+    render();
+  }
+
+  function removeTask(id){
+    tasks = tasks.filter(t => t.id !== id);
+    save();
+    render();
+  }
+
+  function moveTask(id, newStatus){
+    const t = tasks.find(t => t.id === id);
+    if(!t) return;
+    t.status = newStatus;
+    save();
+    render();
+  }
+
+  function editTask(id, newText){
+    const t = tasks.find(t => t.id === id);
+    if(!t) return;
+    newText = newText.trim();
+    if(newText){
+      t.text = newText;
+    }
+    save();
+    render();
+  }
+
+  function nextStatus(status){
+    const i = STATUSES.indexOf(status);
+    return STATUSES[Math.min(i+1, STATUSES.length-1)];
+  }
+
+  function cardEl(task){
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.draggable = true;
+    card.dataset.id = task.id;
+
+    const row = document.createElement('div');
+    row.className = 'card-row';
+
+    const txt = document.createElement('div');
+    txt.className = 'txt';
+    txt.contentEditable = 'true';
+    txt.spellcheck = false;
+    txt.textContent = task.text;
+    txt.addEventListener('blur', () => editTask(task.id, txt.textContent));
+    txt.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter'){ e.preventDefault(); txt.blur(); }
+    });
+
+    const btns = document.createElement('div');
+    btns.className = 'card-btns';
+
+    if(task.status !== 'done'){
+      const moveBtn = document.createElement('button');
+      moveBtn.className = 'icon-btn move-btn';
+      moveBtn.title = 'Move to next column';
+      moveBtn.textContent = '→';
+      moveBtn.addEventListener('click', () => moveTask(task.id, nextStatus(task.status)));
+      btns.appendChild(moveBtn);
+    }
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'icon-btn';
+    delBtn.title = 'Delete';
+    delBtn.textContent = '×';
+    delBtn.addEventListener('click', () => removeTask(task.id));
+    btns.appendChild(delBtn);
+
+    row.appendChild(txt);
+    row.appendChild(btns);
+    card.appendChild(row);
+
+    card.addEventListener('dragstart', (e) => {
+      draggedId = task.id;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      draggedId = null;
+    });
+
+    return card;
+  }
+
+  function render(){
+    STATUSES.forEach(status => {
+      const container = document.getElementById('cards-' + status);
+      container.innerHTML = '';
+      const items = tasks.filter(t => t.status === status);
+      document.getElementById('count-' + status).textContent = items.length;
+      if(items.length === 0){
+        const empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = status === 'done' ? 'Nothing finished yet' : 'Nothing here';
+        container.appendChild(empty);
+      }else{
+        items.forEach(t => container.appendChild(cardEl(t)));
+      }
+    });
+  }
+
+  STATUSES.forEach(status => {
+    const container = document.getElementById('cards-' + status);
+
+    container.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      container.classList.add('drag-over');
+    });
+    container.addEventListener('dragleave', () => {
+      container.classList.remove('drag-over');
+    });
+    container.addEventListener('drop', (e) => {
+      e.preventDefault();
+      container.classList.remove('drag-over');
+      if(draggedId){
+        moveTask(draggedId, status);
+      }
+    });
+  });
+
+  document.querySelectorAll('.add-row input').forEach(input => {
+    input.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter'){
+        addTask(input.dataset.status, input.value);
+        input.value = '';
+      }
+    });
+  });
+
+  document.getElementById('clear-done').addEventListener('click', () => {
+    tasks = tasks.filter(t => t.status !== 'done');
+    save();
+    render();
+  });
+
+  load();
+})();
+</script>
+</body>
+</html>
