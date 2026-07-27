@@ -1,5 +1,37 @@
 # Decisions
 
+## [2026-07-27] Infinite scroll per panel, with per-source ceilings
+
+**Context:** Every panel was capped at a hardcoded slice (15 HN, 16 Reddit, 15
+GitHub, 15 games). Request was to raise the caps or add infinite scroll.
+
+**Decision:** `render()` became `card()` + `renderPaged(bodyEl, nextPage,
+toCard, emptyMessage)`. Panels fill a batch at a time and pull the next one near
+the bottom of the scroll. `nextPage()` hides where the batch comes from, so each
+source uses whatever it actually supports — measured, not assumed:
+
+- **Hacker News** — 500 ids up front, but one request per story, so details are
+  fetched 20 at a time as you scroll. True infinite scroll.
+- **GitHub** — real API paging, 30 per page, stopping at page 5 (unauthenticated
+  search is rate-limited and caps at 1000 results).
+- **Reddit** — RSS has no cursor, so one request per sub at `limit=100` (verified
+  ceiling; 200 posts total) and the rendering pages through it. Now sorted by
+  time so the two subs interleave rather than one following the other.
+- **GamerPower** — no pagination and only 14 active giveaways exist, so it
+  returns everything in one batch.
+
+`renderPaged` keeps pulling while the panel is too short to overflow — otherwise
+there is nothing to scroll and the second page would never be requested. Also
+raised the proxy's `limit` clamp from 50 to 100, which would otherwise have
+silently dropped `limit=100` back to the fallback of 8.
+
+**Rejected:** Just raising the hardcoded slices. It moves the cap without
+removing it, and HN would have meant 500 requests on page load.
+
+**Files touched:** `public/index.html`, `api/[...proxy].js`
+
+---
+
 ## [2026-07-27] vercel.json is required after all; static assets moved to public/
 
 **Context:** The first deploy failed with `No entrypoint found in "/vercel/path0"`.

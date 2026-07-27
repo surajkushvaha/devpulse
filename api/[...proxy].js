@@ -33,9 +33,10 @@ function fetchUpstream(url, redirectsLeft = 3) {
 }
 
 // Query values land in a URL, so every one of them is scrubbed here.
+// 100 is Reddit's own listing ceiling; anything above it is pointless.
 const clamp = (v, fallback) => {
   const n = parseInt(v, 10);
-  return Number.isFinite(n) && n > 0 && n <= 50 ? n : fallback;
+  return Number.isFinite(n) && n > 0 && n <= 100 ? n : fallback;
 };
 
 const ROUTES = {

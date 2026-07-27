@@ -402,27 +402,63 @@
   // All four panels draw the same card — thumbnail, title, dot-separated meta.
   // toCard() maps one source's item onto those fields; `title` is inserted as
   // HTML so a caller can add markup, so callers escape it themselves.
-  function render(bodyEl, items, emptyMessage, toCard){
-    bodyEl.innerHTML = '';
-    items.forEach(item => {
-      const c = toCard(item);
-      const a = document.createElement('a');
-      a.className = 'card';
-      a.href = c.href;
-      a.target = '_blank';
-      a.rel = 'noopener';
-      a.innerHTML =
-        thumb(c.img, c.letter) +
-        '<div class="card-body">' +
-          '<div class="item-title">' + c.title + '</div>' +
-          '<div class="item-meta">' +
-            c.meta.filter(Boolean).map(t => '<span>' + escapeHtml(t) + '</span>')
-                  .join('<span class="sep">·</span>') +
-          '</div>' +
-        '</div>';
-      bodyEl.appendChild(a);
-    });
-    if(!items.length) showEmpty(bodyEl, emptyMessage);
+  function card(c){
+    const a = document.createElement('a');
+    a.className = 'card';
+    a.href = c.href;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.innerHTML =
+      thumb(c.img, c.letter) +
+      '<div class="card-body">' +
+        '<div class="item-title">' + c.title + '</div>' +
+        '<div class="item-meta">' +
+          c.meta.filter(Boolean).map(t => '<span>' + escapeHtml(t) + '</span>')
+                .join('<span class="sep">·</span>') +
+        '</div>' +
+      '</div>';
+    return a;
+  }
+
+  // Fills a panel a batch at a time and pulls the next batch as you near the
+  // bottom. nextPage() returns the next array of items, or [] when the source
+  // is exhausted — whether that means another HTTP request or another slice of
+  // an already-fetched list is up to the caller.
+  function renderPaged(bodyEl, nextPage, toCard, emptyMessage){
+    let busy = false, done = false, count = 0;
+
+    async function loadMore(){
+      if(busy || done) return;
+      busy = true;
+      try{
+        const items = await nextPage();
+        if(count === 0) bodyEl.innerHTML = '';   // first batch replaces the skeleton
+        if(items.length){
+          items.forEach(it => bodyEl.appendChild(card(toCard(it))));
+          count += items.length;
+        }else{
+          done = true;
+        }
+      }catch(e){
+        done = true;
+        busy = false;
+        if(count === 0) throw e;                 // nothing on screen yet — let the panel report it
+        return;
+      }
+      busy = false;
+
+      if(done && count === 0) showEmpty(bodyEl, emptyMessage);
+      // A panel that doesn't overflow can't be scrolled, so it would never ask
+      // for more. Keep pulling until there's something to scroll.
+      else if(!done && bodyEl.scrollHeight <= bodyEl.clientHeight) await loadMore();
+    }
+
+    // Assigning (not addEventListener) means a refresh replaces the old handler
+    // instead of stacking another one.
+    bodyEl.onscroll = () => {
+      if(bodyEl.scrollTop + bodyEl.clientHeight > bodyEl.scrollHeight - 150) loadMore();
+    };
+    return loadMore();
   }
 
   async function loadHN(){
@@ -431,17 +467,24 @@
     try{
       const idsRes = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json');
       if(!idsRes.ok) throw new Error('HTTP ' + idsRes.status);
-      const ids = (await idsRes.json()).slice(0, 15);
-      const items = await Promise.all(ids.map(id =>
-        fetch('https://hacker-news.firebaseio.com/v0/item/' + id + '.json').then(r => r.json())
-      ));
-      render(body, items.filter(Boolean), 'No stories returned.', it => ({
+      // ~500 ids, but each story needs its own request, so fetch them in batches
+      // as you scroll rather than firing 500 requests up front.
+      const ids = await idsRes.json();
+      let i = 0;
+      await renderPaged(body, async () => {
+        const batch = ids.slice(i, i + 20);
+        i += 20;
+        const items = await Promise.all(batch.map(id =>
+          fetch('https://hacker-news.firebaseio.com/v0/item/' + id + '.json').then(r => r.json())
+        ));
+        return items.filter(Boolean);
+      }, it => ({
         href: it.url || ('https://news.ycombinator.com/item?id=' + it.id),
         img: hnFavicon(it.url),
         letter: 'Y',
         title: escapeHtml(it.title),
         meta: [(it.score||0) + ' pts', (it.descendants||0) + ' comments', timeAgo(it.time)]
-      }));
+      }), 'No stories returned.');
     }catch(e){
       showError(body, 'Could not load Hacker News (' + e.message + ').', 'https://news.ycombinator.com', 'Open Hacker News');
     }
@@ -478,24 +521,32 @@
     try{
       const subs = ['programming', 'webdev'];
       let via = 'server proxy';
+      // Reddit's RSS has no cursor — one request per sub is all we get, so ask
+      // for the maximum and page through the result client-side.
       const results = await Promise.all(subs.map(async sub => {
         const r = await fetchProxied(
-          `/reddit?sub=${sub}&limit=8`,
-          `https://www.reddit.com/r/${sub}/.rss?limit=8`,
+          `/reddit?sub=${sub}&limit=100`,
+          `https://www.reddit.com/r/${sub}/.rss?limit=100`,
           'text'
         );
         if(r.via === 'public relay') via = 'public relay';
         return parseRedditRss(r.data).map(item => ({ ...item, subreddit: sub }));
       }));
-      const combined = results.flat().slice(0, 16);
+      // Newest first, so the two subs interleave instead of one following the other.
+      const combined = results.flat().sort((a, b) => b.time - a.time);
 
-      render(body, combined, 'No posts returned.', p => ({
+      let i = 0;
+      await renderPaged(body, () => {
+        const batch = combined.slice(i, i + 20);
+        i += 20;
+        return batch;
+      }, p => ({
         href: p.href,
         img: p.thumbnail,
         letter: p.subreddit[0].toUpperCase(),
         title: escapeHtml(p.title),
         meta: ['r/' + p.subreddit, timeAgo(p.time)]
-      }));
+      }), 'No posts returned.');
       updateSrcBadge('reddit', via);
     }catch(e){
       showError(body, 'Could not load Reddit (' + e.message + ').', 'https://reddit.com/r/programming', 'Open r/programming');
@@ -507,17 +558,22 @@
     showSkeleton(body, 8);
     try{
       const since = new Date(Date.now() - 7*24*3600*1000).toISOString().slice(0,10);
-      const url = 'https://api.github.com/search/repositories?q=created:>' + since + '&sort=stars&order=desc&per_page=15';
-      const res = await fetch(url, { headers: { 'Accept': 'application/vnd.github+json' } });
-      if(!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
-      render(body, data.items || [], 'No repos returned.', repo => ({
+      const url = 'https://api.github.com/search/repositories?q=created:>' + since + '&sort=stars&order=desc&per_page=30&page=';
+      let page = 0;
+      await renderPaged(body, async () => {
+        page++;
+        // Unauthenticated search is rate-limited and caps at 1000 results anyway.
+        if(page > 5) return [];
+        const res = await fetch(url + page, { headers: { 'Accept': 'application/vnd.github+json' } });
+        if(!res.ok) throw new Error('HTTP ' + res.status);
+        return (await res.json()).items || [];
+      }, repo => ({
         href: repo.html_url,
         img: repo.owner && repo.owner.avatar_url,
         letter: (repo.name||'?')[0].toUpperCase(),
         title: escapeHtml(repo.full_name),
         meta: ['★ ' + repo.stargazers_count, repo.language, repo.description && repo.description.slice(0,60)]
-      }));
+      }), 'No repos returned.');
     }catch(e){
       showError(body, 'Could not load GitHub trending (' + e.message + ').', 'https://github.com/trending', 'Open GitHub Trending');
     }
@@ -531,9 +587,16 @@
         '/games?platform=epic-games-store+steam',
         'https://www.gamerpower.com/api/filter?platform=epic-games-store+steam&type=game&sort-by=date'
       );
-      // GamerPower answers with a status object, not an array, when nothing is live.
-      const giveaways = Array.isArray(data) ? data.slice(0, 15) : [];
-      render(body, giveaways, 'No active giveaways right now.', g => ({
+      // GamerPower answers with a status object, not an array, when nothing is
+      // live. It has no pagination and returns every active giveaway at once
+      // (currently ~14), so there is nothing to page — show them all.
+      const giveaways = Array.isArray(data) ? data : [];
+      let sent = false;
+      await renderPaged(body, () => {
+        if(sent) return [];
+        sent = true;
+        return giveaways;
+      }, g => ({
         href: g.open_giveaway_url || g.gamerpower_url,
         img: g.thumbnail || g.image,
         letter: (g.title||'F')[0].toUpperCase(),
@@ -543,7 +606,7 @@
           'was ' + (g.worth || 'N/A'),
           'ends ' + (g.end_date === '2099-01-01 00:00:00' ? 'no fixed date' : (g.end_date||'').slice(0,10))
         ]
-      }));
+      }), 'No active giveaways right now.');
       updateSrcBadge('games', via);
     }catch(e){
       showError(body, 'Could not load game deals (' + e.message + '). Both the site proxy and the public relay failed.', 'https://www.gamerpower.com/giveaways', 'Open GamerPower');
