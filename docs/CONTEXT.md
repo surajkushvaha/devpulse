@@ -10,18 +10,18 @@ framework. `index.html` is the whole app.
 
 Working and deployable to Vercel with zero config.
 
-- `index.html` — markup, styles, and script in one file
+- `public/index.html` — markup, styles, and script in one file
 - `api/[...proxy].js` — the only server-side code; proxies Reddit RSS and
   GamerPower, which send no CORS headers
-- `devpulse-proxy.js` — local dev server; serves static files and mounts the
+- `devpulse-proxy.js` — local dev server; serves `public/` and mounts the
   same `api/[...proxy].js` handler, so local matches production
+- `vercel.json` — `framework: null` + `outputDirectory: public`; required, see
+  DECISIONS.md
 
 Data path for Reddit/GamerPower: same-origin `/api` first, public CORS relay as
 fallback. Hacker News and GitHub are called directly from the browser.
 
-Six files total: `index.html`, `api/[...proxy].js`, `devpulse-proxy.js`,
-`package.json`, `README.md`, `favicon.ico`. No config file, no lockfile, no
-dependencies.
+No build step, no lockfile, no dependencies.
 
 ## Open items
 

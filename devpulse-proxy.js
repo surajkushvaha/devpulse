@@ -12,7 +12,8 @@ const path = require('path');
 const apiHandler = require('./api/[...proxy].js');
 
 const PORT = 8787;
-const ROOT = process.cwd();
+// Same directory Vercel serves statically, so local matches the deploy.
+const ROOT = path.join(__dirname, 'public');
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',

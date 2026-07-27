@@ -32,23 +32,27 @@ handler Vercel runs in production, so local and deployed behave identically.
 
 ## Deploying to Vercel
 
-Zero config — Vercel serves `index.html` at `/` and turns `api/[...proxy].js`
-into a serverless function automatically.
+Push to `main` and Vercel builds it. No build step, no dependencies, no env vars.
+
+`vercel.json` sets `framework: null` and `outputDirectory: public`. Both are
+load-bearing: without them Vercel sees a `package.json` with no framework,
+assumes this is a Node **server** app, and fails the build looking for an
+entrypoint (`app.js`, `server.js`, `main`…). Declaring "Other" plus a static
+output directory tells it to serve `public/` from the CDN and compile `api/`
+into functions.
 
 ```bash
 npm i -g vercel
-vercel          # preview deploy
-vercel --prod   # production
+vercel --prod   # or just push to main
 ```
-
-Or import the repo at [vercel.com/new](https://vercel.com/new) and accept the
-defaults: no framework, no build command, no output directory.
 
 ## Files
 
-- **index.html** — the entire app (markup, styles, script)
+- **public/index.html** — the entire app (markup, styles, script)
+- **public/favicon.ico**
 - **api/[...proxy].js** — the CORS proxy for Reddit + GamerPower
 - **devpulse-proxy.js** — local dev server; reuses the handler above
+- **vercel.json** — see the deploy note above
 
 ## Data Sources
 

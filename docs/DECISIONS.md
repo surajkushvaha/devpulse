@@ -1,5 +1,35 @@
 # Decisions
 
+## [2026-07-27] vercel.json is required after all; static assets moved to public/
+
+**Context:** The first deploy failed with `No entrypoint found in "/vercel/path0"`.
+Vercel CLI 56 now detects Node.js **backend** apps: it sees a `package.json`
+with no framework preset and looks for a server entrypoint (`app.js`,
+`server.js`, or `main`). Deleting `main` in the cleanup pass is what surfaced
+this — but keeping `main` would have been worse, since Vercel would then have
+booted `devpulse-proxy.js` as the site's server.
+
+**Decision:** Added `vercel.json` with `framework: null` (the documented way to
+select the "Other" preset) and `outputDirectory: "public"`, and moved
+`index.html` + `favicon.ico` into `public/`. Vercel now serves `public/` from
+the CDN and compiles `api/` into functions. `devpulse-proxy.js` serves the same
+directory via `path.join(__dirname, 'public')`.
+
+**Rejected:** (a) Running `devpulse-proxy.js` as a Vercel Node server. It would
+put every static page load behind a function, and `fs` reads of paths computed
+at runtime aren't traced into the bundle, so `index.html` would likely be
+missing at runtime and need `includeFiles` to patch. (b) `outputDirectory: "."`,
+which avoids moving files but publishes `package.json`, `README.md`, and `docs/`
+as static assets.
+
+**Note:** this reverses the earlier "no config needed" decision below. Zero
+config stopped being true when Vercel added backend-framework detection.
+
+**Files touched:** `vercel.json`, `public/index.html`, `public/favicon.ico`,
+`devpulse-proxy.js`, `README.md`
+
+---
+
 ## [2026-07-27] One render() for all four panels
 
 **Context:** Each of the four `load*` functions hand-built the same
