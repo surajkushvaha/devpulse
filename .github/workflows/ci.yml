@@ -22,24 +22,22 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
-      - name: Install dependencies
-        run: npm install
+      - name: Validate JavaScript syntax
+        run: npm run check
 
-      - name: Start server and wait for readiness
+      # Boots the server and checks static serving plus API routing. Deliberately
+      # does not call Reddit/GamerPower — that would make CI fail whenever a
+      # third party has a bad day.
+      - name: Start server and check routing
         run: |
           npm start &
           echo $! > server.pid
-          for i in {1..20}; do
-            if curl -sf http://localhost:8787/devpulse.html >/dev/null; then
-              break
-            fi
+          for i in $(seq 1 20); do
+            curl -sf http://localhost:8787/health >/dev/null && break
             sleep 1
           done
-          if ! curl -sf http://localhost:8787/devpulse.html >/dev/null; then
-            echo 'Server failed to start or respond on http://localhost:8787/devpulse.html'
-            kill "$(cat server.pid)" || true
-            exit 1
-          fi
-
-      - name: Validate JavaScript syntax
-        run: node --check devpulse-proxy.js
+          fail() { echo "$1"; kill "$(cat server.pid)" || true; exit 1; }
+          curl -sf http://localhost:8787/ >/dev/null || fail 'index.html not served at /'
+          [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8787/api/nope)" = "404" ] \
+            || fail 'API handler not mounted (expected 404 for unknown route)'
+          kill "$(cat server.pid)"

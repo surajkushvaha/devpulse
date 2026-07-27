@@ -450,6 +450,7 @@
   }
 
   const LOCAL_PROXY = 'http://localhost:8787';
+  const SERVER_PROXY = '/api';
 
   function fetchWithTimeout(url, ms){
     const controller = new AbortController();
@@ -478,6 +479,12 @@
       const res = await fetchWithTimeout(LOCAL_PROXY + localPath, 1200);
       if(res.ok) return { data: await res.json(), via: 'local proxy' };
     }catch(e){ /* local proxy not running — fall through */ }
+
+    try{
+      const res = await fetch(SERVER_PROXY + localPath, { cache: 'no-store' });
+      if(res.ok) return { data: await res.json(), via: 'server proxy' };
+    }catch(e){ /* server proxy unavailable — fall through */ }
+
     const data = await proxiedFetch(fallbackUrl);
     return { data, via: 'public relay' };
   }
@@ -487,6 +494,11 @@
     try{
       const res = await fetchWithTimeout(localUrl, 1200);
       if(res.ok) return { text: await res.text(), via: 'local proxy' };
+    }catch(e){ }
+
+    try{
+      const res = await fetch(SERVER_PROXY + `/reddit?sub=${encodeURIComponent(sub)}&limit=${encodeURIComponent(limit)}&format=rss`, { cache: 'no-store' });
+      if(res.ok) return { text: await res.text(), via: 'server proxy' };
     }catch(e){ }
 
     const rssUrl = `https://www.reddit.com/r/${sub}/.rss?limit=${limit}`;
