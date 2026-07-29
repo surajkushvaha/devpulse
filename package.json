@@ -1,11 +1,24 @@
 {
   "name": "devpulse",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "description": "A lightweight personal feed aggregator for developers",
   "license": "MIT",
   "scripts": {
-    "start": "node devpulse-proxy.js",
-    "check": "node --check devpulse-proxy.js && node --check \"api/[...proxy].js\""
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
+    "next": "^16.2.12",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^6.0.3"
   }
 }

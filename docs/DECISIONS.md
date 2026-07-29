@@ -1,5 +1,241 @@
 # Decisions
 
+## [2026-07-29] Apple design language: system font + Liquid Glass
+
+**Context:** Request to adopt a full Apple design system — Apple sans fonts and
+Apple's "Liquid Glass" UI.
+
+**Fonts (honest constraint):** SF Pro is not licensed for web self-hosting and
+is not on Google Fonts, so it cannot be bundled via `next/font`. The authentic
+approach (what apple.com uses) is the **system font stack**: `-apple-system,
+BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue',
+system-ui` renders real SF Pro on Apple platforms and the native UI font
+everywhere else. So `next/font` was removed entirely — the app now downloads
+zero web fonts. Meta strips moved from a mono face to the system sans with
+`font-variant-numeric: tabular-nums`, matching how Apple sets numbers.
+
+**Liquid Glass (honest label):** there is no official Apple web material; this is
+the sanctioned web *approximation* — `backdrop-filter: blur() saturate()` for
+vibrancy, layered inner highlight + refractive hairline + hairline ring, over a
+colorful fixed wallpaper (soft blue/indigo/pink/green blobs) so the glass has
+something to refract. A `prefers-reduced-transparency: reduce` block drops the
+blur to a solid fill. Applied to the header island and every panel surface; the
+opaque double-bezel tray from the previous design is gone.
+
+**System alignment:** accent is now Apple system blue (#007aff light / #0a84ff
+dark); the primary "refresh all" button is an Apple-blue filled pill; chips are
+Apple system-fill pills that fill blue when active; colors are Apple label /
+fill / separator semantics; corners use Apple's larger radii. The dark theme is
+true-black-based (iOS style) rather than the previous charcoal.
+
+**Kept:** all structure, class names, and behavior — this is a CSS + layout-font
+change only; no component logic touched. Interactions and both themes verified
+in headless Chromium.
+
+**Note on the taste skill:** its Appendix C explicitly says Liquid Glass is an
+Apple-platform material with no official web package, and to label web versions
+as approximations — which is exactly what the code comments do.
+
+**Files touched:** `app/globals.css`, `app/layout.tsx`, `README.md`,
+`docs/CONTEXT.md`.
+
+---
+
+## [2026-07-29] TypeScript + taste-skill UI review (dark mode, a11y, icons)
+
+**Context:** Two follow-ups: convert the fresh Next app to TypeScript (it had
+been authored as `.jsx`/`.js` to match the old vanilla codebase, which no longer
+applies), and run the installed `design-taste-frontend` skill over the UI.
+
+**TypeScript:**
+- Converted every file to `.ts`/`.tsx` with real prop/model types (`Source`,
+  `CardModel`, `Pager`, `PanelProps`, etc.). Upstream payloads stay `any` —
+  they're heterogeneous external JSON and typing them fully buys nothing.
+- **TypeScript version:** npm's `latest` is now `7.0.2`, the native-port preview,
+  and Next 16 rejects it ("does not provide the compiler API required by
+  Next.js"). Pinned to the newest *stable* line Next supports, **6.0.3**.
+  "Latest, well-maintained" means the newest release that actually works with the
+  toolchain, not a preview that breaks the type-checker.
+
+**Taste review (honest scope):** the skill is explicitly for landing pages, "not
+dashboards," so only its universal rules were applied, not the hero/bento/image
+machinery. Findings acted on:
+- **Dark mode** added (the skill mandates it for consumer-facing pages). All
+  colours are semantic CSS variables now; a `prefers-color-scheme: dark` block
+  swaps the token set. Greys became concrete (not alpha-over-white) so text meets
+  WCAG AA in both modes.
+- **Em-dashes removed** from visible text (the skill's hard ban): the game card's
+  `FREE — title` is now a standalone `FREE` pill, footer sentences were split, and
+  the tab title uses a middle dot. Verified: zero `—` in the served HTML.
+- **Contrast:** eyebrow micro-labels moved from a 0.34-alpha grey (~2.5:1) to a
+  concrete AA-passing grey.
+- **Focus:** cards got a `:focus-visible` ring (keyboard a11y).
+- **Empty/error states** now compose to the panel center instead of floating at
+  the top-left of a tall panel.
+- **Icons:** the unicode `↻`/`→` glyphs became `@phosphor-icons/react`
+  (`ArrowClockwise`, `ArrowUpRight`) — the skill's recommended, actively
+  maintained icon family.
+- **Softened** the accent-coloured glow on active chips to a neutral shadow.
+
+**Deliberately kept (dashboard idiom, against a landing-page rule):** dot-separated
+meta strips and the brand pulse-dot. The skill rations middle-dots and bans
+decorative dots, but those rules target marketing pages; a compact data feed
+legitimately uses dot-separated metadata, and the pulse dot is the brand mark.
+
+**Files touched:** every source file (`.jsx`→`.tsx`, `.js`→`.ts`),
+`app/globals.css`, `tsconfig.json` (new), `package.json`, `README.md`,
+`docs/CONTEXT.md`.
+
+---
+
+## [2026-07-29] Migrate from vanilla static + serverless to Next.js
+
+**Context:** The app was a single `public/index.html` plus a plain-node
+`api/[...proxy].js`, deployed with `framework: null`. The high-end redesign had
+just pulled in Google Fonts over a `<link>` — the project's first runtime
+dependency. Direction from the user: "it's hosted on Vercel, use Next.js," and
+"always use the latest, actively-maintained libraries."
+
+**Decision:** Rebuilt the app on Next.js (App Router) + React. Latest at time of
+writing: **Next 16, React 19**.
+
+- **Fonts:** `next/font/google` self-hosts Space Grotesk / Plus Jakarta Sans /
+  JetBrains Mono at build time and exposes each as a CSS variable. This *removes*
+  the runtime font-CDN request the previous step introduced — the concern that
+  prompted this migration is gone, not just relocated. System-font fallbacks stay
+  in every stack.
+- **Proxy:** `api/[...proxy].js` (raw `https` module, node req/res) became
+  `app/api/[...proxy]/route.js` — a catch-all Route Handler using global `fetch`
+  (which follows redirects itself, so the manual redirect loop is gone). Same
+  three routes, same scrubbing, same CORS + `s-maxage` cache headers.
+- **UI:** the one imperative `<script>` became React. `lib/feeds.js` holds the
+  source descriptors, parsers, and pager factories; `components/Panel.jsx` is one
+  reusable panel driving every feed; `components/Header.jsx` is the island header.
+  The `globals.css` design system carried over unchanged except the font vars now
+  point at `next/font` and the card fade-up became a CSS `@keyframes` (React keeps
+  card DOM stable across renders, so only newly mounted cards animate).
+- **Paging:** `renderPaged`'s scroll handler + "keep pulling until it overflows"
+  loop became an `IntersectionObserver` on a bottom sentinel plus a post-render
+  top-up effect — cleaner in React, and it reads `scrollHeight` only after the DOM
+  has actually updated. A per-load request id cancels stale reloads.
+- **Removed:** `public/index.html`, `api/[...proxy].js`, `devpulse-proxy.js`
+  (Next's dev server replaces it), and `vercel.json` (`framework: null` was there
+  precisely to *stop* Vercel treating this as an app — with Next it auto-detects).
+- **CI:** now `npm ci` + `next build` (which type-checks, compiles routes, and
+  fetches the self-hosted fonts) plus a boot-and-route-check on port 3000.
+
+**Rejected:** (a) Keeping vanilla and just self-hosting the woff2 files — would
+have solved the font dependency without a framework, but the user explicitly
+asked for Next.js. (b) Adding a data-fetching library (TanStack Query et al.) —
+plain hooks cover the five feeds without another dependency to keep current;
+"latest libraries" governs what we *do* pull in, not a mandate to pull in more.
+(c) TypeScript — the codebase was JS; kept it JS to stay approachable, and
+`next build` still type-checks via JSDoc-free inference.
+
+**Verified:** `next build` passes (fonts downloaded, routes compiled). Ran the
+production server under headless Chromium with upstreams stubbed: all five panels
+render, chips switch categories and reload only their panel, the FREE badge and
+proxy/relay labels show, HN/GitHub paging tops up a short panel, the sync clock
+updates, fonts resolve to Space Grotesk, and there are no console or hydration
+errors. Live upstream fetches remain blocked by egress policy in the sandbox, as
+before.
+
+**Files touched:** everything — see the commit. New tree under `app/`,
+`components/`, `lib/`; `package.json`, `.github/workflows/ci.yml`, `.gitignore`,
+`README.md`, `docs/CONTEXT.md` updated.
+
+---
+
+## [2026-07-29] High-end visual overhaul (Soft Structuralism + double-bezel)
+
+**Context:** Follow-up to the papers/games work — "choose the best template, use
+the taste skill for the UI." Applied the `high-end-visual-design` taste skill
+(installed via `npx skills add`). The user explicitly chose the full agency
+overhaul over a self-contained polish, accepting the one tradeoff it forces.
+
+**Decision:** Rebuilt `index.html`'s styling around the skill's rules while
+keeping every id, data attribute, and the entire `<script>` untouched — the
+redesign is CSS + a little markup, not a rewrite.
+
+- **Variance engine roll:** *Soft Structuralism* vibe (silver-white canvas,
+  bold grotesk type, soft diffused ambient shadows) + *Asymmetrical Bento*
+  layout (2×2 panels above a full-width featured Research Papers row). Soft
+  Structuralism was chosen because it elevates the existing Apple-clean identity
+  rather than replacing it, and suits a dense data dashboard better than the
+  OLED "Ethereal Glass" or serif "Editorial Luxury" archetypes.
+- **Double-bezel panels:** each `.panel` is now an outer tray (subtle bg,
+  hairline ring, squircle radius, ambient float shadow) wrapping a `.panel-core`
+  inner surface (white, concentric smaller radius, inset top highlight) — the
+  "glass plate in an aluminium tray" nesting the skill mandates.
+- **Fluid-island header:** replaced the banned edge-to-edge sticky navbar with a
+  floating glass pill (`backdrop-blur`, detached, `top:18px`).
+- **Button-in-button CTA:** "refresh all" is a dark pill with the ↻ nested in
+  its own circular wrapper that rotates on hover; panel refreshers became
+  circular ghost buttons.
+- **Motion:** all transitions use one custom `--ease`
+  `cubic-bezier(0.32,0.72,0,1)`; cards fade-up on draw (double-rAF reveal),
+  gated behind `prefers-reduced-motion` so reduced-motion visitors get static
+  cards, not stuck-invisible ones. Only `transform`/`opacity` animate; the
+  only `backdrop-blur` is on the sticky header.
+- **Type:** Space Grotesk (display) / Plus Jakarta Sans (UI) / JetBrains Mono
+  (meta), replacing the system stack — the skill bans Inter/Roboto/Arial/etc.
+
+**Tradeoff / rejected:** This is the first external dependency in the project —
+three Google Fonts loaded via `<link>`, which breaks the long-standing "no
+dependencies, fully self-contained" rule. The self-contained *polish* option
+(keep system fonts, no network) was offered and explicitly declined in favor of
+the premium look. Fallbacks in every font stack (`system-ui`, `ui-monospace`)
+keep the page fully functional if the font CDN is blocked or offline — verified
+in the headless render, where the fonts don't load and the layout still holds.
+
+**Files touched:** `public/index.html`, `README.md`, `docs/CONTEXT.md`
+
+---
+
+## [2026-07-29] Research papers panel + category chips on papers and games
+
+**Context:** Request was to list research papers (AI / computer / machine
+learning) by category, and to group the game deals by store (Xbox, Steam, Epic,
+…). Both are "one feed, several categories" — the same shape.
+
+**Decision:** One shared `.pill` chip row and a `buildPills(rowId, items,
+getActive, onSelect)` helper drive both. A chip click sets a module-level state
+variable (`paperCat` / `gamePlatform`) and reloads only that panel — no full
+refresh. The two panels reuse the existing `card()` / `renderPaged()` pipeline
+unchanged; only their loaders and a filter variable are new.
+
+- **Research Papers** — new panel, arXiv Atom API. Chips map to arXiv archive
+  codes (AI → `cs.AI`, Machine Learning → `cs.LG`, Computer Vision → `cs.CV`,
+  NLP → `cs.CL`, Systems → `cs.DC`, Robotics → `cs.RO`), sorted newest first.
+  arXiv sends no CORS headers, so it joins Reddit and GamerPower behind `/api`
+  (new `papers` route) with the public relay as the same fallback. `parseArxiv`
+  mirrors `parseRedditRss` — both are Atom, parsed with `DOMParser`. The panel
+  is full-width (`.panel.wide`) with two-up cards, since paper titles are long.
+- **Free Game Deals** — the existing panel gained a store chip row. GamerPower's
+  `platform` filter already joins ids with `+`, so `Xbox` is
+  `xbox-one+xbox-series-xs+xbox-360`, `PlayStation` is `ps4+ps5`, and the
+  default chip keeps the old `epic-games-store+steam` view.
+
+**Rejected:** (a) A second dropdown/`<select>` for filtering — chips show every
+option at a glance and match the flat, no-chrome look of the rest of the page.
+(b) A separate render path for the wide panel — the two-column layout is pure
+CSS grid on the panel body, so `card()`/`renderPaged()` needed no changes. (c)
+Fetching arXiv directly from the browser — its API sends no CORS headers, same
+as Reddit, so it takes the same proxy path rather than a fourth code path.
+
+**Verified:** Loaded the page in headless Chromium with the `/api` responses
+stubbed (realistic arXiv Atom + GamerPower JSON): both chip rows render, the
+active chip tracks state, clicking a chip reloads only its panel with the new
+category, and paper cards show author / category / age correctly. Live upstream
+fetches are blocked by egress policy in the build sandbox (the existing
+GamerPower route 403s there too), so this is the same "verified by eye/DOM,
+not against live upstream" posture already noted for `render()`.
+
+**Files touched:** `public/index.html`, `api/[...proxy].js`, `README.md`,
+`docs/CONTEXT.md`
+
+---
+
 ## [2026-07-27] Infinite scroll per panel, with per-source ceilings
 
 **Context:** Every panel was capped at a hardcoded slice (15 HN, 16 Reddit, 15
