@@ -3,16 +3,20 @@
 ## What it is
 
 A single-page developer news dashboard: Hacker News, Reddit, GitHub trending,
-and free game giveaways in four panels. No build step, no dependencies, no
-framework. `index.html` is the whole app.
+free game giveaways, and arXiv research papers in six panels. No build step, no
+dependencies, no framework. `index.html` is the whole app.
+
+The game and paper panels carry a row of filter chips (`.pill`). Picking one
+sets a module-level state variable and reloads just that panel — games by store
+(Steam / Epic / Xbox / …), papers by arXiv category (cs.AI / cs.LG / …).
 
 ## Current state
 
 Working and deployable to Vercel with zero config.
 
 - `public/index.html` — markup, styles, and script in one file
-- `api/[...proxy].js` — the only server-side code; proxies Reddit RSS and
-  GamerPower, which send no CORS headers
+- `api/[...proxy].js` — the only server-side code; proxies Reddit RSS,
+  GamerPower, and the arXiv Atom API, none of which send CORS headers
 - `devpulse-proxy.js` — local dev server; serves `public/` and mounts the
   same `api/[...proxy].js` handler, so local matches production
 - `vercel.json` — `framework: null` + `outputDirectory: public`; required, see

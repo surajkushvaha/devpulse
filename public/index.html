@@ -141,6 +141,36 @@
   }
   .panel-refresh:hover{ color:var(--accent); }
 
+  /* A full-width row for a "featured" panel — research papers spans both
+     columns, and its cards sit two-up on desktop to use the extra width. */
+  .panel.wide{ grid-column:1 / -1; }
+  .panel.wide .panel-body{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    align-content:start;
+  }
+  @media (max-width: 860px){
+    .panel.wide{ grid-column:auto; }
+    .panel.wide .panel-body{ display:block; }
+  }
+
+  /* Category / platform filter chips shown under a panel head. */
+  .pill-row{
+    display:flex; gap:6px; flex-wrap:wrap;
+    padding:0 20px 12px;
+  }
+  .pill{
+    font-family:inherit; font-size:11px; line-height:1;
+    background:transparent; color:var(--muted);
+    border:1px solid var(--border);
+    padding:5px 11px; cursor:pointer;
+    border-radius:20px;
+    transition:background .15s, color .15s, border-color .15s;
+  }
+  .pill:hover{ color:var(--accent); border-color:var(--accent-wash); }
+  .pill.active{ background:var(--accent); color:#fff; border-color:var(--accent); }
+  .pill:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
   .panel-body{
     overflow-y:auto; flex:1;
     padding:2px 0 8px;
@@ -289,12 +319,25 @@
     <div class="panel-head">
       <div class="panel-title"><h2>Free Game Deals</h2></div>
       <div style="display:flex; align-items:center; gap:10px;">
-        <span class="panel-src">epic + steam</span>
         <span class="panel-src" id="badge-games"></span>
         <button class="panel-refresh" data-target="games" title="Refresh">↻</button>
       </div>
     </div>
+    <div class="pill-row" id="pills-games"></div>
     <div class="panel-body" id="body-games"></div>
+  </section>
+
+  <section class="panel wide">
+    <div class="panel-head">
+      <div class="panel-title"><h2>Research Papers</h2></div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="panel-src">arXiv · newest first</span>
+        <span class="panel-src" id="badge-papers"></span>
+        <button class="panel-refresh" data-target="papers" title="Refresh">↻</button>
+      </div>
+    </div>
+    <div class="pill-row" id="pills-papers"></div>
+    <div class="panel-body" id="body-papers"></div>
   </section>
 
 </main>
@@ -373,6 +416,25 @@
     });
   }
 
+  function parseArxiv(xmlText){
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xmlText, 'application/xml');
+    const entries = Array.from(doc.querySelectorAll('entry'));
+    return entries.map(entry => {
+      // arXiv wraps titles across lines; collapse the whitespace back down.
+      const title = (entry.querySelector('title')?.textContent || '').replace(/\s+/g, ' ').trim();
+      // <id> is the canonical abstract URL.
+      const href = entry.querySelector('id')?.textContent || '';
+      const published = entry.querySelector('published')?.textContent || '';
+      const time = published ? Math.floor(Date.parse(published) / 1000) : Math.floor(Date.now() / 1000);
+      const authors = Array.from(entry.querySelectorAll('author > name')).map(n => n.textContent);
+      // primary_category is namespaced (arxiv:); fall back to the first plain
+      // <category> term, which every entry carries.
+      const primary = (entry.querySelector('primary_category, category')?.getAttribute('term')) || '';
+      return { title, href, time, authors, primary };
+    });
+  }
+
   function showSkeleton(bodyEl, rows){
     bodyEl.innerHTML = '';
     for(let i=0;i<rows;i++){
@@ -391,6 +453,26 @@
 
   function showEmpty(bodyEl, message){
     bodyEl.innerHTML = '<div class="empty">' + escapeHtml(message) + '</div>';
+  }
+
+  // Renders one row of filter chips. `items` are {label, value}; clicking a chip
+  // marks it active and calls onSelect(value). getActive() decides which chip is
+  // lit on (re)build.
+  function buildPills(rowId, items, getActive, onSelect){
+    const row = document.getElementById(rowId);
+    row.innerHTML = '';
+    items.forEach(it => {
+      const b = document.createElement('button');
+      b.className = 'pill' + (it.value === getActive() ? ' active' : '');
+      b.textContent = it.label;
+      b.addEventListener('click', () => {
+        if(it.value === getActive()) return;
+        row.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+        b.classList.add('active');
+        onSelect(it.value);
+      });
+      row.appendChild(b);
+    });
   }
 
   function updateSrcBadge(panel, via){
@@ -579,13 +661,26 @@
     }
   }
 
+  // Game giveaways, grouped by store. GamerPower joins platforms with '+', and
+  // its filter accepts every id below. The default keeps the old epic+steam view.
+  const GAME_PLATFORMS = [
+    { label: 'Epic + Steam', value: 'epic-games-store+steam' },
+    { label: 'Steam',        value: 'steam' },
+    { label: 'Epic',         value: 'epic-games-store' },
+    { label: 'Xbox',         value: 'xbox-one+xbox-series-xs+xbox-360' },
+    { label: 'PlayStation',  value: 'ps4+ps5' },
+    { label: 'GOG',          value: 'gog' },
+    { label: 'PC (all)',     value: 'pc' }
+  ];
+  let gamePlatform = GAME_PLATFORMS[0].value;
+
   async function loadGames(){
     const body = document.getElementById('body-games');
     showSkeleton(body, 6);
     try{
       const { data, via } = await fetchProxied(
-        '/games?platform=epic-games-store+steam',
-        'https://www.gamerpower.com/api/filter?platform=epic-games-store+steam&type=game&sort-by=date'
+        '/games?platform=' + gamePlatform,
+        'https://www.gamerpower.com/api/filter?platform=' + gamePlatform + '&type=game&sort-by=date'
       );
       // GamerPower answers with a status object, not an array, when nothing is
       // live. It has no pagination and returns every active giveaway at once
@@ -613,7 +708,52 @@
     }
   }
 
-  const loaders = { hn: loadHN, reddit: loadReddit, github: loadGitHub, games: loadGames };
+  // arXiv categories, grouped by field. Each maps to one arXiv archive code.
+  const PAPER_CATS = [
+    { label: 'AI',               value: 'cs.AI' },
+    { label: 'Machine Learning', value: 'cs.LG' },
+    { label: 'Computer Vision',  value: 'cs.CV' },
+    { label: 'NLP',              value: 'cs.CL' },
+    { label: 'Systems',          value: 'cs.DC' },
+    { label: 'Robotics',         value: 'cs.RO' }
+  ];
+  let paperCat = PAPER_CATS[0].value;
+
+  async function loadPapers(){
+    const body = document.getElementById('body-papers');
+    showSkeleton(body, 8);
+    try{
+      // arXiv has real paging (start/max_results), but a category's newest 40
+      // is plenty for a feed; fetch once and page through it client-side.
+      const r = await fetchProxied(
+        `/papers?cat=${paperCat}&limit=40`,
+        `https://export.arxiv.org/api/query?search_query=cat:${paperCat}&sortBy=submittedDate&sortOrder=descending&start=0&max_results=40`,
+        'text'
+      );
+      const papers = parseArxiv(r.data);
+      let i = 0;
+      await renderPaged(body, () => {
+        const batch = papers.slice(i, i + 12);
+        i += 12;
+        return batch;
+      }, p => ({
+        href: p.href,
+        img: null,
+        letter: (p.authors[0] || 'A')[0].toUpperCase(),
+        title: escapeHtml(p.title),
+        meta: [
+          p.authors.length > 1 ? p.authors[0] + ' +' + (p.authors.length - 1) : (p.authors[0] || ''),
+          p.primary,
+          timeAgo(p.time)
+        ]
+      }), 'No papers found for this category.');
+      updateSrcBadge('papers', r.via);
+    }catch(e){
+      showError(body, 'Could not load research papers (' + e.message + ').', 'https://arxiv.org/list/cs.AI/recent', 'Open arXiv');
+    }
+  }
+
+  const loaders = { hn: loadHN, reddit: loadReddit, github: loadGitHub, games: loadGames, papers: loadPapers };
 
   function refreshAll(){
     Object.values(loaders).forEach(fn => fn());
@@ -633,6 +773,14 @@
   document.getElementById('auto-refresh').addEventListener('change', (e) => {
     clearInterval(autoTimer);
     if(e.target.checked) autoTimer = setInterval(refreshAll, 15*60*1000);
+  });
+
+  // Category filters: pick a value, reload just that panel.
+  buildPills('pills-games', GAME_PLATFORMS, () => gamePlatform, v => {
+    gamePlatform = v; loadGames(); setSynced();
+  });
+  buildPills('pills-papers', PAPER_CATS, () => paperCat, v => {
+    paperCat = v; loadPapers(); setSynced();
   });
 
   refreshAll();

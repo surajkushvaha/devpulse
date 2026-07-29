@@ -1,5 +1,49 @@
 # Decisions
 
+## [2026-07-29] Research papers panel + category chips on papers and games
+
+**Context:** Request was to list research papers (AI / computer / machine
+learning) by category, and to group the game deals by store (Xbox, Steam, Epic,
+…). Both are "one feed, several categories" — the same shape.
+
+**Decision:** One shared `.pill` chip row and a `buildPills(rowId, items,
+getActive, onSelect)` helper drive both. A chip click sets a module-level state
+variable (`paperCat` / `gamePlatform`) and reloads only that panel — no full
+refresh. The two panels reuse the existing `card()` / `renderPaged()` pipeline
+unchanged; only their loaders and a filter variable are new.
+
+- **Research Papers** — new panel, arXiv Atom API. Chips map to arXiv archive
+  codes (AI → `cs.AI`, Machine Learning → `cs.LG`, Computer Vision → `cs.CV`,
+  NLP → `cs.CL`, Systems → `cs.DC`, Robotics → `cs.RO`), sorted newest first.
+  arXiv sends no CORS headers, so it joins Reddit and GamerPower behind `/api`
+  (new `papers` route) with the public relay as the same fallback. `parseArxiv`
+  mirrors `parseRedditRss` — both are Atom, parsed with `DOMParser`. The panel
+  is full-width (`.panel.wide`) with two-up cards, since paper titles are long.
+- **Free Game Deals** — the existing panel gained a store chip row. GamerPower's
+  `platform` filter already joins ids with `+`, so `Xbox` is
+  `xbox-one+xbox-series-xs+xbox-360`, `PlayStation` is `ps4+ps5`, and the
+  default chip keeps the old `epic-games-store+steam` view.
+
+**Rejected:** (a) A second dropdown/`<select>` for filtering — chips show every
+option at a glance and match the flat, no-chrome look of the rest of the page.
+(b) A separate render path for the wide panel — the two-column layout is pure
+CSS grid on the panel body, so `card()`/`renderPaged()` needed no changes. (c)
+Fetching arXiv directly from the browser — its API sends no CORS headers, same
+as Reddit, so it takes the same proxy path rather than a fourth code path.
+
+**Verified:** Loaded the page in headless Chromium with the `/api` responses
+stubbed (realistic arXiv Atom + GamerPower JSON): both chip rows render, the
+active chip tracks state, clicking a chip reloads only its panel with the new
+category, and paper cards show author / category / age correctly. Live upstream
+fetches are blocked by egress policy in the build sandbox (the existing
+GamerPower route 403s there too), so this is the same "verified by eye/DOM,
+not against live upstream" posture already noted for `render()`.
+
+**Files touched:** `public/index.html`, `api/[...proxy].js`, `README.md`,
+`docs/CONTEXT.md`
+
+---
+
 ## [2026-07-27] Infinite scroll per panel, with per-source ceilings
 
 **Context:** Every panel was capped at a hardcoded slice (15 HN, 16 Reddit, 15

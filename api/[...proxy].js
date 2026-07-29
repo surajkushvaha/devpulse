@@ -2,7 +2,7 @@
 // so the browser can't call them directly — this fetches them server-side and
 // passes the bytes straight back.
 //
-// Routes: /api/reddit?sub=&limit=   /api/games?platform=
+// Routes: /api/reddit?sub=&limit=   /api/games?platform=   /api/papers?cat=&limit=
 // Also used by devpulse-proxy.js for local dev, so it sticks to the plain
 // node req/res API rather than Vercel's res.status().send() sugar.
 
@@ -53,6 +53,14 @@ const ROUTES = {
       (q.get('platform') || 'epic-games-store+steam').replace(/[^a-z0-9.+-]/gi, '') +
       '&type=game&sort-by=date',
     'application/json; charset=utf-8'
+  ],
+  papers: (q) => [
+    // arXiv's Atom API sends no CORS headers, so it goes through here too.
+    // A category is 'cs.AI'-shaped, so dots survive but nothing else does.
+    'https://export.arxiv.org/api/query?search_query=cat:' +
+      (q.get('cat') || 'cs.AI').replace(/[^a-z0-9.]/gi, '') +
+      '&sortBy=submittedDate&sortOrder=descending&start=0&max_results=' + clamp(q.get('limit'), 40),
+    'application/atom+xml; charset=utf-8'
   ]
 };
 

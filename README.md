@@ -7,15 +7,19 @@ A lightweight web dashboard that aggregates developer news from four sources int
 - **Hacker News** — Top stories from the community
 - **Reddit** — Hot posts from r/programming and r/webdev
 - **GitHub Trending** — Repositories trending this week
-- **Free Game Deals** — Free games from Epic Games Store and Steam
+- **Free Game Deals** — Free game giveaways, filterable by store (Steam, Epic,
+  Xbox, PlayStation, GOG, PC)
+- **Research Papers** — Newest papers from arXiv, filterable by field (AI,
+  Machine Learning, Computer Vision, NLP, Systems, Robotics)
 
 Nothing is stored. Every request goes to the original source.
 
 ## How it works
 
 Hacker News and GitHub send CORS headers, so the browser calls them directly.
-Reddit and GamerPower don't, so they go through `/api` — a single serverless
-function (`api/[...proxy].js`) that fetches upstream and passes the bytes back.
+Reddit, GamerPower, and arXiv don't, so they go through `/api` — a single
+serverless function (`api/[...proxy].js`) that fetches upstream and passes the
+bytes back.
 
 If `/api` isn't reachable — opening `index.html` straight off disk, for example —
 those two panels fall back to a public CORS relay. The label next to each panel
@@ -50,7 +54,7 @@ vercel --prod   # or just push to main
 
 - **public/index.html** — the entire app (markup, styles, script)
 - **public/favicon.ico**
-- **api/[...proxy].js** — the CORS proxy for Reddit + GamerPower
+- **api/[...proxy].js** — the CORS proxy for Reddit + GamerPower + arXiv
 - **devpulse-proxy.js** — local dev server; reuses the handler above
 - **vercel.json** — see the deploy note above
 
@@ -60,10 +64,11 @@ vercel --prod   # or just push to main
 - [Reddit RSS](https://www.reddit.com/dev/api)
 - [GitHub API](https://api.github.com)
 - [GamerPower API](https://www.gamerpower.com/api)
+- [arXiv API](https://info.arxiv.org/help/api/index.html)
 
 ## Notes
 
 - No dependencies, no build step
-- Not affiliated with Reddit or GamerPower
+- Not affiliated with Reddit, GamerPower, or arXiv
 - Respects `prefers-reduced-motion`
 - Reddit rate-limits datacenter IPs, so proxy responses are CDN-cached for 5 minutes
