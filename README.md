@@ -1,6 +1,7 @@
 # DevPulse — Personal Feed
 
-A lightweight web dashboard that aggregates developer news from four sources into one page.
+A lightweight web dashboard that aggregates developer news from five sources into
+one page. Built with **Next.js** (App Router) and **React**, deployed on Vercel.
 
 ## Features
 
@@ -17,46 +18,42 @@ Nothing is stored. Every request goes to the original source.
 ## How it works
 
 Hacker News and GitHub send CORS headers, so the browser calls them directly.
-Reddit, GamerPower, and arXiv don't, so they go through `/api` — a single
-serverless function (`api/[...proxy].js`) that fetches upstream and passes the
-bytes back.
+Reddit, GamerPower, and arXiv don't, so they go through `/api/<source>` — a
+catch-all Next.js Route Handler (`app/api/[...proxy]/route.js`) that fetches
+upstream and passes the bytes back. Responses are CDN-cached for 5 minutes.
 
-If `/api` isn't reachable — opening `index.html` straight off disk, for example —
-those two panels fall back to a public CORS relay. The label next to each panel
-shows which one answered.
+If `/api` ever fails, the affected panels fall back to a public CORS relay. The
+label next to each panel shows which one answered.
+
+Fonts (Space Grotesk / Plus Jakarta Sans / JetBrains Mono) are self-hosted at
+build time via `next/font` — there is no runtime request to a font CDN, and
+every font stack falls back to system fonts.
 
 ## Running locally
 
 ```bash
-npm start          # http://localhost:8787
+npm install
+npm run dev        # http://localhost:3000
 ```
 
-`devpulse-proxy.js` serves the static files and mounts the exact same `/api`
-handler Vercel runs in production, so local and deployed behave identically.
+`npm run build && npm start` runs the production server the same way Vercel does.
 
 ## Deploying to Vercel
 
-Push to `main` and Vercel builds it. No build step, no dependencies, no env vars.
+Push to `main`. Vercel auto-detects Next.js — no `vercel.json`, no framework
+override, no env vars. The page is served statically from the CDN and
+`app/api/[...proxy]` is compiled into a serverless function.
 
-`vercel.json` sets `framework: null` and `outputDirectory: public`. Both are
-load-bearing: without them Vercel sees a `package.json` with no framework,
-assumes this is a Node **server** app, and fails the build looking for an
-entrypoint (`app.js`, `server.js`, `main`…). Declaring "Other" plus a static
-output directory tells it to serve `public/` from the CDN and compile `api/`
-into functions.
+## Project structure
 
-```bash
-npm i -g vercel
-vercel --prod   # or just push to main
-```
-
-## Files
-
-- **public/index.html** — the entire app (markup, styles, script)
+- **app/layout.jsx** — root layout; wires up `next/font` and global metadata
+- **app/page.jsx** — the dashboard (client component: header + panel grid)
+- **app/globals.css** — the whole design system (one file)
+- **app/api/[...proxy]/route.js** — the CORS proxy for Reddit + GamerPower + arXiv
+- **components/Header.jsx** — the fluid-island header (clock, sync, refresh, auto)
+- **components/Panel.jsx** — the reusable feed panel (paging, chips, states)
+- **lib/feeds.js** — source definitions, upstream parsers, and pager factories
 - **public/favicon.ico**
-- **api/[...proxy].js** — the CORS proxy for Reddit + GamerPower + arXiv
-- **devpulse-proxy.js** — local dev server; reuses the handler above
-- **vercel.json** — see the deploy note above
 
 ## Data Sources
 
@@ -68,8 +65,8 @@ vercel --prod   # or just push to main
 
 ## Notes
 
-- No build step; the only external asset is three Google Fonts (with system-font
-  fallbacks), loaded via `<link>` for the high-end visual design
+- Dependencies are kept to `next` / `react` / `react-dom` (latest)
+- Fonts are self-hosted via `next/font` — no runtime font-CDN dependency
 - Not affiliated with Reddit, GamerPower, or arXiv
 - Respects `prefers-reduced-motion`
 - Reddit rate-limits datacenter IPs, so proxy responses are CDN-cached for 5 minutes

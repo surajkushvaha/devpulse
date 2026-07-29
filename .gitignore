@@ -3,5 +3,9 @@
 .claude/
 skills-lock.json
 
-# Node
+# Node / Next.js
 node_modules/
+.next/
+next-env.d.ts
+.vercel/
+*.tsbuildinfo

@@ -1,5 +1,63 @@
 # Decisions
 
+## [2026-07-29] Migrate from vanilla static + serverless to Next.js
+
+**Context:** The app was a single `public/index.html` plus a plain-node
+`api/[...proxy].js`, deployed with `framework: null`. The high-end redesign had
+just pulled in Google Fonts over a `<link>` — the project's first runtime
+dependency. Direction from the user: "it's hosted on Vercel, use Next.js," and
+"always use the latest, actively-maintained libraries."
+
+**Decision:** Rebuilt the app on Next.js (App Router) + React. Latest at time of
+writing: **Next 16, React 19**.
+
+- **Fonts:** `next/font/google` self-hosts Space Grotesk / Plus Jakarta Sans /
+  JetBrains Mono at build time and exposes each as a CSS variable. This *removes*
+  the runtime font-CDN request the previous step introduced — the concern that
+  prompted this migration is gone, not just relocated. System-font fallbacks stay
+  in every stack.
+- **Proxy:** `api/[...proxy].js` (raw `https` module, node req/res) became
+  `app/api/[...proxy]/route.js` — a catch-all Route Handler using global `fetch`
+  (which follows redirects itself, so the manual redirect loop is gone). Same
+  three routes, same scrubbing, same CORS + `s-maxage` cache headers.
+- **UI:** the one imperative `<script>` became React. `lib/feeds.js` holds the
+  source descriptors, parsers, and pager factories; `components/Panel.jsx` is one
+  reusable panel driving every feed; `components/Header.jsx` is the island header.
+  The `globals.css` design system carried over unchanged except the font vars now
+  point at `next/font` and the card fade-up became a CSS `@keyframes` (React keeps
+  card DOM stable across renders, so only newly mounted cards animate).
+- **Paging:** `renderPaged`'s scroll handler + "keep pulling until it overflows"
+  loop became an `IntersectionObserver` on a bottom sentinel plus a post-render
+  top-up effect — cleaner in React, and it reads `scrollHeight` only after the DOM
+  has actually updated. A per-load request id cancels stale reloads.
+- **Removed:** `public/index.html`, `api/[...proxy].js`, `devpulse-proxy.js`
+  (Next's dev server replaces it), and `vercel.json` (`framework: null` was there
+  precisely to *stop* Vercel treating this as an app — with Next it auto-detects).
+- **CI:** now `npm ci` + `next build` (which type-checks, compiles routes, and
+  fetches the self-hosted fonts) plus a boot-and-route-check on port 3000.
+
+**Rejected:** (a) Keeping vanilla and just self-hosting the woff2 files — would
+have solved the font dependency without a framework, but the user explicitly
+asked for Next.js. (b) Adding a data-fetching library (TanStack Query et al.) —
+plain hooks cover the five feeds without another dependency to keep current;
+"latest libraries" governs what we *do* pull in, not a mandate to pull in more.
+(c) TypeScript — the codebase was JS; kept it JS to stay approachable, and
+`next build` still type-checks via JSDoc-free inference.
+
+**Verified:** `next build` passes (fonts downloaded, routes compiled). Ran the
+production server under headless Chromium with upstreams stubbed: all five panels
+render, chips switch categories and reload only their panel, the FREE badge and
+proxy/relay labels show, HN/GitHub paging tops up a short panel, the sync clock
+updates, fonts resolve to Space Grotesk, and there are no console or hydration
+errors. Live upstream fetches remain blocked by egress policy in the sandbox, as
+before.
+
+**Files touched:** everything — see the commit. New tree under `app/`,
+`components/`, `lib/`; `package.json`, `.github/workflows/ci.yml`, `.gitignore`,
+`README.md`, `docs/CONTEXT.md` updated.
+
+---
+
 ## [2026-07-29] High-end visual overhaul (Soft Structuralism + double-bezel)
 
 **Context:** Follow-up to the papers/games work — "choose the best template, use

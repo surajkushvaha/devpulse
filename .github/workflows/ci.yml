@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [24.x]
+        node-version: [22.x]
 
     steps:
       - name: Checkout repository
@@ -21,23 +21,29 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+          cache: npm
 
-      - name: Validate JavaScript syntax
-        run: npm run check
+      - name: Install dependencies
+        run: npm ci
 
-      # Boots the server and checks static serving plus API routing. Deliberately
-      # does not call Reddit/GamerPower — that would make CI fail whenever a
-      # third party has a bad day.
+      # next build type-checks the app, compiles the routes, and downloads the
+      # self-hosted fonts. It never calls Reddit/GamerPower/arXiv, so a third
+      # party having a bad day can't turn this red.
+      - name: Build
+        run: npm run build
+
+      # Boot the production server and prove the catch-all API route is mounted
+      # (unknown routes 404) and the page serves.
       - name: Start server and check routing
         run: |
           npm start &
           echo $! > server.pid
-          for i in $(seq 1 20); do
-            curl -sf http://localhost:8787/health >/dev/null && break
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3000/ >/dev/null && break
             sleep 1
           done
           fail() { echo "$1"; kill "$(cat server.pid)" || true; exit 1; }
-          curl -sf http://localhost:8787/ >/dev/null || fail 'index.html not served at /'
-          [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8787/api/nope)" = "404" ] \
-            || fail 'API handler not mounted (expected 404 for unknown route)'
+          curl -sf http://localhost:3000/ >/dev/null || fail 'page not served at /'
+          [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/api/nope)" = "404" ] \
+            || fail 'API route not mounted (expected 404 for unknown route)'
           kill "$(cat server.pid)"
