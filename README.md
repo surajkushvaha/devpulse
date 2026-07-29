@@ -68,7 +68,8 @@ vercel --prod   # or just push to main
 
 ## Notes
 
-- No dependencies, no build step
+- No build step; the only external asset is three Google Fonts (with system-font
+  fallbacks), loaded via `<link>` for the high-end visual design
 - Not affiliated with Reddit, GamerPower, or arXiv
 - Respects `prefers-reduced-motion`
 - Reddit rate-limits datacenter IPs, so proxy responses are CDN-cached for 5 minutes

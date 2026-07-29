@@ -1,0 +1,7 @@
+# Local tooling — installed skills, not app code
+.agents/
+.claude/
+skills-lock.json
+
+# Node
+node_modules/

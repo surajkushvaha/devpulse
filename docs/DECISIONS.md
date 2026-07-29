@@ -1,5 +1,51 @@
 # Decisions
 
+## [2026-07-29] High-end visual overhaul (Soft Structuralism + double-bezel)
+
+**Context:** Follow-up to the papers/games work — "choose the best template, use
+the taste skill for the UI." Applied the `high-end-visual-design` taste skill
+(installed via `npx skills add`). The user explicitly chose the full agency
+overhaul over a self-contained polish, accepting the one tradeoff it forces.
+
+**Decision:** Rebuilt `index.html`'s styling around the skill's rules while
+keeping every id, data attribute, and the entire `<script>` untouched — the
+redesign is CSS + a little markup, not a rewrite.
+
+- **Variance engine roll:** *Soft Structuralism* vibe (silver-white canvas,
+  bold grotesk type, soft diffused ambient shadows) + *Asymmetrical Bento*
+  layout (2×2 panels above a full-width featured Research Papers row). Soft
+  Structuralism was chosen because it elevates the existing Apple-clean identity
+  rather than replacing it, and suits a dense data dashboard better than the
+  OLED "Ethereal Glass" or serif "Editorial Luxury" archetypes.
+- **Double-bezel panels:** each `.panel` is now an outer tray (subtle bg,
+  hairline ring, squircle radius, ambient float shadow) wrapping a `.panel-core`
+  inner surface (white, concentric smaller radius, inset top highlight) — the
+  "glass plate in an aluminium tray" nesting the skill mandates.
+- **Fluid-island header:** replaced the banned edge-to-edge sticky navbar with a
+  floating glass pill (`backdrop-blur`, detached, `top:18px`).
+- **Button-in-button CTA:** "refresh all" is a dark pill with the ↻ nested in
+  its own circular wrapper that rotates on hover; panel refreshers became
+  circular ghost buttons.
+- **Motion:** all transitions use one custom `--ease`
+  `cubic-bezier(0.32,0.72,0,1)`; cards fade-up on draw (double-rAF reveal),
+  gated behind `prefers-reduced-motion` so reduced-motion visitors get static
+  cards, not stuck-invisible ones. Only `transform`/`opacity` animate; the
+  only `backdrop-blur` is on the sticky header.
+- **Type:** Space Grotesk (display) / Plus Jakarta Sans (UI) / JetBrains Mono
+  (meta), replacing the system stack — the skill bans Inter/Roboto/Arial/etc.
+
+**Tradeoff / rejected:** This is the first external dependency in the project —
+three Google Fonts loaded via `<link>`, which breaks the long-standing "no
+dependencies, fully self-contained" rule. The self-contained *polish* option
+(keep system fonts, no network) was offered and explicitly declined in favor of
+the premium look. Fallbacks in every font stack (`system-ui`, `ui-monospace`)
+keep the page fully functional if the font CDN is blocked or offline — verified
+in the headless render, where the fonts don't load and the layout still holds.
+
+**Files touched:** `public/index.html`, `README.md`, `docs/CONTEXT.md`
+
+---
+
 ## [2026-07-29] Research papers panel + category chips on papers and games
 
 **Context:** Request was to list research papers (AI / computer / machine

@@ -4,354 +4,368 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DevPulse — Personal Feed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap">
 <style>
   :root{
-    --bg:#ffffff;
-    --panel:#f5f5f7;
-    --border:rgba(29,29,31,0.09);
-    --text:#1d1d1f;
-    --muted:rgba(29,29,31,0.55);
-    --muted-2:rgba(29,29,31,0.32);
-    --accent:#0066cc;
-    --accent-wash:rgba(0,102,204,0.08);
-    --alert:#d5342a;
-    --radius:14px;
-    --radius-sm:10px;
-    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --canvas:#eceef3;
+    --tray:rgba(17,22,38,0.03);
+    --core:#ffffff;
+    --ink:#0b0d14;
+    --muted:rgba(11,13,20,0.56);
+    --muted-2:rgba(11,13,20,0.34);
+    --line:rgba(11,13,20,0.07);
+    --accent:#2b50e2;
+    --accent-2:#7a5cff;
+    --accent-wash:rgba(43,80,226,0.09);
+    --alert:#e5484d;
+    --r-shell:26px;
+    --r-core:19px;
+    --r-card:15px;
+    --shadow-float:0 1px 2px rgba(17,22,38,0.05), 0 14px 34px -14px rgba(17,22,38,0.18), 0 30px 64px -30px rgba(17,22,38,0.15);
+    --shadow-lift:0 3px 6px rgba(17,22,38,0.07), 0 24px 50px -18px rgba(17,22,38,0.26), 0 44px 84px -36px rgba(17,22,38,0.22);
+    --ease:cubic-bezier(0.32,0.72,0,1);
+    --mono:'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    --sans:'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --display:'Space Grotesk', var(--sans);
   }
 
   *{ box-sizing:border-box; }
 
+  html{ scroll-behavior:smooth; }
+
   html,body{
     margin:0; padding:0;
-    background:var(--bg);
-    color:var(--text);
+    background:var(--canvas);
+    color:var(--ink);
     font-family:var(--sans);
-    min-height:100vh;
+    min-height:100dvh;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+
+  /* Fixed ambient mesh — soft indigo / violet / cyan orbs over silver.
+     Fixed + pointer-events:none keeps it off the scroll repaint path. */
+  body::before{
+    content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background:
+      radial-gradient(58% 48% at 12% -4%, rgba(43,80,226,0.12), transparent 68%),
+      radial-gradient(52% 44% at 104% 6%, rgba(122,92,255,0.11), transparent 70%),
+      radial-gradient(46% 42% at 88% 104%, rgba(0,170,200,0.08), transparent 72%);
   }
 
   ::selection{ background:var(--accent); color:#fff; }
 
   a{ color:inherit; text-decoration:none; }
 
-  code{ font-family:var(--mono); color:var(--muted); background:var(--panel); padding:1px 5px; border-radius:4px; }
+  code{ font-family:var(--mono); font-size:0.92em; color:var(--accent); background:var(--accent-wash); padding:1px 6px; border-radius:6px; }
 
+  /* ---- Fluid Island header ---- */
   header{
-    position:sticky; top:0; z-index:10;
-    background:rgba(255,255,255,0.85);
-    backdrop-filter: blur(10px);
-    border-bottom:1px solid var(--border);
-    padding:22px 28px;
+    position:sticky; top:18px; z-index:100;
+    max-width:1160px; margin:18px auto 0; padding:0 20px;
+  }
+  .island{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:20px; flex-wrap:wrap;
+    padding:11px 12px 11px 22px; border-radius:999px;
+    background:rgba(255,255,255,0.66);
+    backdrop-filter:blur(20px) saturate(1.5);
+    -webkit-backdrop-filter:blur(20px) saturate(1.5);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.8),
+      0 0 0 1px rgba(17,22,38,0.05),
+      0 12px 34px -12px rgba(17,22,38,0.28);
   }
 
-  .header-row{
-    display:flex; align-items:baseline; justify-content:space-between;
-    flex-wrap:wrap; gap:12px;
-    max-width:1180px; margin:0 auto;
-  }
-
-  .brand{ display:flex; align-items:baseline; gap:10px; }
-
-  .brand h1{
-    font-size:15px; letter-spacing:.01em; margin:0;
-    font-weight:600;
-  }
-
+  .brand{ display:flex; align-items:center; gap:10px; }
   .brand .dot{
-    width:5px; height:5px; border-radius:50%;
-    background:var(--accent); display:inline-block;
-    animation:pulse 2.2s ease-in-out infinite;
+    width:7px; height:7px; border-radius:50%;
+    background:radial-gradient(circle at 30% 30%, var(--accent-2), var(--accent));
+    box-shadow:0 0 0 4px var(--accent-wash);
+    animation:pulse 2.4s var(--ease) infinite;
+  }
+  @keyframes pulse{ 0%,100%{ opacity:1; transform:scale(1); } 50%{ opacity:.4; transform:scale(.82); } }
+  .wordmark{ font-family:var(--display); font-weight:700; font-size:16px; letter-spacing:-0.02em; color:var(--ink); }
+  .eyebrow{
+    font-family:var(--mono); font-size:9px; letter-spacing:0.18em; text-transform:uppercase;
+    color:var(--accent); background:var(--accent-wash); padding:4px 9px; border-radius:999px;
   }
 
-  @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.3; } }
+  .island-right{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .status{ font-family:var(--mono); font-size:11px; color:var(--muted); display:flex; align-items:center; gap:9px; }
+  #clock{ color:var(--ink); font-weight:500; }
+  .sep-dot{ width:3px; height:3px; border-radius:50%; background:var(--muted-2); }
 
-  .brand .eyebrow{
-    font-size:12.5px; color:var(--muted);
+  /* Button-in-button: label + nested circular icon */
+  .refresh-all{
+    font-family:var(--sans); font-size:12.5px; font-weight:600;
+    display:inline-flex; align-items:center; gap:9px;
+    padding:7px 7px 7px 16px; cursor:pointer;
+    color:#fff; background:var(--ink); border:none; border-radius:999px;
+    box-shadow:0 8px 20px -8px rgba(17,22,38,0.6), inset 0 1px 0 rgba(255,255,255,0.14);
+    transition:transform var(--ease) .4s, box-shadow var(--ease) .4s;
   }
-
-  .status{
-    font-family:var(--mono); font-size:11px; color:var(--muted);
-    display:flex; align-items:center; gap:16px;
+  .refresh-all .btn-icon{
+    width:26px; height:26px; border-radius:999px;
+    background:rgba(255,255,255,0.16); display:grid; place-items:center;
+    font-size:13px; transition:transform var(--ease) .5s, background var(--ease) .4s;
   }
+  .refresh-all:hover{ transform:translateY(-1px); box-shadow:0 12px 26px -8px rgba(17,22,38,0.7), inset 0 1px 0 rgba(255,255,255,0.18); }
+  .refresh-all:hover .btn-icon{ transform:rotate(180deg) scale(1.06); background:rgba(255,255,255,0.24); }
+  .refresh-all:active{ transform:scale(0.97); }
+  .refresh-all:focus-visible{ outline:2px solid var(--accent); outline-offset:3px; }
 
-  #clock{ color:var(--accent); font-weight:600; }
+  .auto{ display:flex; align-items:center; gap:7px; cursor:pointer; user-select:none; font-size:12px; color:var(--muted); }
+  input[type=checkbox]{ accent-color:var(--accent); width:14px; height:14px; }
 
-  .controls{
-    display:flex; align-items:center; gap:18px;
-    font-size:12px; color:var(--muted);
-    max-width:1180px; margin:12px auto 0;
-  }
-
-  button.refresh-all{
-    font-family:inherit; font-size:12px;
-    background:var(--panel); color:var(--text);
-    border:none; padding:6px 14px; cursor:pointer;
-    border-radius:20px;
-    transition:background .15s, color .15s;
-  }
-  button.refresh-all:hover{ background:var(--accent-wash); color:var(--accent); }
-  button.refresh-all:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
-
-  label.auto{ display:flex; align-items:center; gap:6px; cursor:pointer; user-select:none; }
-  input[type=checkbox]{ accent-color:var(--accent); }
-
+  /* ---- Bento grid ---- */
   main{
-    padding:36px 28px 70px;
-    display:grid;
-    grid-template-columns:repeat(2, 1fr);
-    gap:16px;
-    max-width:1180px;
-    margin:0 auto;
+    max-width:1200px; margin:0 auto; padding:52px 20px 120px;
+    display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:22px;
   }
 
-  @media (max-width: 860px){
-    main{ grid-template-columns:1fr; padding:26px 16px 50px; }
-    .header-row{ flex-direction:column; align-items:flex-start; }
-  }
-
+  /* ---- Panel: double-bezel (aluminium tray + glass core) ---- */
   .panel{
-    background:var(--panel);
-    border-radius:var(--radius);
+    background:var(--tray); border-radius:var(--r-shell); padding:7px;
+    box-shadow:0 0 0 1px rgba(17,22,38,0.05), var(--shadow-float);
+    transition:transform var(--ease) .5s, box-shadow var(--ease) .5s;
+  }
+  .panel:hover{ transform:translateY(-3px); box-shadow:0 0 0 1px rgba(17,22,38,0.06), var(--shadow-lift); }
+
+  .panel-core{
+    background:var(--core); border-radius:var(--r-core);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.9), inset 0 0 0 1px rgba(17,22,38,0.04);
     display:flex; flex-direction:column;
-    min-height:340px; max-height:560px;
-    overflow:hidden;
+    min-height:360px; max-height:564px; overflow:hidden;
+  }
+
+  .panel.wide{ grid-column:1 / -1; }
+  .panel.wide .panel-core{ min-height:300px; max-height:600px; }
+  .panel.wide .panel-body{
+    display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); align-content:start;
   }
 
   .panel-head{
-    display:flex; align-items:baseline; justify-content:space-between;
-    padding:18px 20px 12px;
-    flex-wrap:wrap; gap:6px;
+    display:flex; align-items:flex-start; justify-content:space-between;
+    gap:10px; padding:20px 22px 14px;
   }
-
-  .panel-title h2{
-    font-size:13px; margin:0; letter-spacing:.01em;
-    font-weight:600; color:var(--text);
+  .panel-title{ min-width:0; }
+  .eyebrow-tag{
+    display:block; margin-bottom:6px;
+    font-family:var(--mono); font-size:9px; letter-spacing:0.16em; text-transform:uppercase; color:var(--muted-2);
   }
+  .panel-title h2{ font-family:var(--display); font-size:16px; font-weight:600; letter-spacing:-0.01em; margin:0; color:var(--ink); }
 
-  .panel-src{
-    font-size:11px; color:var(--muted-2);
-  }
-
+  .panel-tools{ display:flex; align-items:center; gap:8px; flex:0 0 auto; }
+  .panel-src{ font-family:var(--mono); font-size:10px; color:var(--accent); }
   .panel-refresh{
-    background:none; border:none; color:var(--muted-2);
-    cursor:pointer; font-size:14px;
-    padding:0 2px; border-radius:4px;
-    transition:color .15s;
+    width:30px; height:30px; border-radius:999px; flex:0 0 auto;
+    background:transparent; border:none; color:var(--muted-2); cursor:pointer;
+    font-size:15px; display:grid; place-items:center;
+    transition:transform var(--ease) .5s, background var(--ease) .4s, color var(--ease) .4s;
   }
-  .panel-refresh:hover{ color:var(--accent); }
+  .panel-refresh:hover{ background:var(--accent-wash); color:var(--accent); transform:rotate(150deg); }
+  .panel-refresh:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
 
-  /* A full-width row for a "featured" panel — research papers spans both
-     columns, and its cards sit two-up on desktop to use the extra width. */
-  .panel.wide{ grid-column:1 / -1; }
-  .panel.wide .panel-body{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0,1fr));
-    align-content:start;
-  }
-  @media (max-width: 860px){
-    .panel.wide{ grid-column:auto; }
-    .panel.wide .panel-body{ display:block; }
-  }
-
-  /* Category / platform filter chips shown under a panel head. */
-  .pill-row{
-    display:flex; gap:6px; flex-wrap:wrap;
-    padding:0 20px 12px;
-  }
+  /* ---- Filter chips ---- */
+  .pill-row{ display:flex; gap:7px; flex-wrap:wrap; padding:0 22px 14px; }
   .pill{
-    font-family:inherit; font-size:11px; line-height:1;
-    background:transparent; color:var(--muted);
-    border:1px solid var(--border);
-    padding:5px 11px; cursor:pointer;
-    border-radius:20px;
-    transition:background .15s, color .15s, border-color .15s;
+    font-family:var(--sans); font-size:11.5px; font-weight:500; line-height:1;
+    color:var(--muted); background:rgba(17,22,38,0.035);
+    border:none; padding:7px 13px; cursor:pointer; border-radius:999px;
+    box-shadow:inset 0 0 0 1px rgba(17,22,38,0.05);
+    transition:transform var(--ease) .35s, color var(--ease) .35s, background var(--ease) .35s, box-shadow var(--ease) .35s;
   }
-  .pill:hover{ color:var(--accent); border-color:var(--accent-wash); }
-  .pill.active{ background:var(--accent); color:#fff; border-color:var(--accent); }
+  .pill:hover{ transform:translateY(-1px); color:var(--ink); box-shadow:inset 0 0 0 1px rgba(17,22,38,0.14); }
+  .pill.active{
+    color:#fff; background:var(--accent); transform:none;
+    box-shadow:0 8px 18px -7px var(--accent), inset 0 1px 0 rgba(255,255,255,0.3);
+  }
   .pill:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
 
-  .panel-body{
-    overflow-y:auto; flex:1;
-    padding:2px 0 8px;
-  }
-
-  .panel-body::-webkit-scrollbar{ width:6px; }
-  .panel-body::-webkit-scrollbar-thumb{ background:rgba(29,29,31,0.15); border-radius:4px; }
+  /* ---- Scroll body ---- */
+  .panel-body{ overflow-y:auto; flex:1; padding:2px 8px 10px; }
+  .panel-body::-webkit-scrollbar{ width:7px; }
+  .panel-body::-webkit-scrollbar-thumb{ background:rgba(17,22,38,0.14); border-radius:999px; border:2px solid transparent; background-clip:padding-box; }
   .panel-body::-webkit-scrollbar-track{ background:transparent; }
 
+  /* ---- Card ---- */
   .card{
-    display:flex; gap:12px; align-items:flex-start;
-    margin:2px 8px; padding:9px 10px;
-    border-radius:var(--radius-sm);
-    transition:background .12s;
+    display:flex; gap:13px; align-items:flex-start;
+    margin:2px 4px; padding:11px 12px; border-radius:var(--r-card);
+    transition:background var(--ease) .35s, transform var(--ease) .35s, box-shadow var(--ease) .35s;
   }
-  .card:hover{ background:rgba(29,29,31,0.05); }
+  .card:hover{ background:rgba(17,22,38,0.04); transform:translateX(3px); box-shadow:inset 0 0 0 1px rgba(17,22,38,0.05); }
+  .card.reveal{ opacity:0; transform:translateY(14px); transition:opacity .6s var(--ease), transform .6s var(--ease); }
+  .card.reveal.in{ opacity:1; transform:none; }
 
   .thumb{
-    position:relative; flex:0 0 auto;
-    width:52px; height:52px;
-    border-radius:10px;
-    overflow:hidden;
-    background:var(--border);
+    position:relative; flex:0 0 auto; width:52px; height:52px;
+    border-radius:13px; overflow:hidden; background:rgba(17,22,38,0.05);
+    box-shadow:inset 0 0 0 1px rgba(17,22,38,0.05);
   }
-  .thumb img{
-    position:absolute; inset:0;
-    width:100%; height:100%;
-    object-fit:cover;
-    display:block;
-  }
+  .thumb img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
   .thumb-fallback{
-    position:absolute; inset:0;
-    display:flex; align-items:center; justify-content:center;
-    font-size:16px; font-weight:600; color:var(--muted);
-    background:var(--panel);
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-family:var(--display); font-size:17px; font-weight:600; color:var(--muted);
   }
   .thumb:not(.thumb-empty) .thumb-fallback{ display:none; }
-  .thumb.thumb-empty{ background:var(--panel); }
 
   .card-body{ min-width:0; flex:1; }
-
   .item-title{
-    font-size:13px; line-height:1.45; color:var(--text);
-    margin-bottom:4px;
-    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
-    overflow:hidden;
+    font-size:13.5px; line-height:1.45; color:var(--ink); font-weight:500; margin-bottom:5px;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
   }
-
-  .item-meta{
-    font-family:var(--mono); font-size:10.5px; color:var(--muted);
-    display:flex; gap:8px; flex-wrap:wrap; align-items:center;
-  }
-
+  .item-meta{ font-family:var(--mono); font-size:10.5px; color:var(--muted); display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
   .item-meta .sep{ color:var(--muted-2); }
-
-  .free-tag{ color:var(--accent); font-weight:600; }
-
-  .empty, .error{
-    padding:20px 20px; font-family:var(--mono); font-size:12px; color:var(--muted);
+  .free-tag{
+    color:var(--accent); font-weight:700; font-family:var(--mono); font-size:10px; letter-spacing:0.06em;
+    background:var(--accent-wash); padding:1px 6px; border-radius:5px;
   }
 
+  .empty, .error{ padding:22px; font-family:var(--mono); font-size:12px; color:var(--muted); }
   .error{ color:var(--alert); }
   .error a{ color:var(--accent); text-decoration:underline; }
 
   .skeleton{
-    height:12px; border-radius:4px;
-    background:linear-gradient(90deg, #eaeaec 25%, #e0e0e3 37%, #eaeaec 63%);
-    background-size:400% 100%;
-    animation:shimmer 1.4s ease infinite;
-    margin:12px 20px;
+    height:12px; border-radius:6px; margin:14px 16px;
+    background:linear-gradient(90deg, rgba(17,22,38,0.05) 25%, rgba(17,22,38,0.10) 37%, rgba(17,22,38,0.05) 63%);
+    background-size:400% 100%; animation:shimmer 1.5s var(--ease) infinite;
   }
   @keyframes shimmer{ 0%{ background-position:100% 0; } 100%{ background-position:0 0; } }
 
   footer{
-    max-width:1180px; margin:0 auto; padding:0 28px 50px;
-    font-size:11.5px; color:var(--muted-2);
-    line-height:1.8;
+    max-width:1200px; margin:0 auto; padding:0 24px 70px;
+    font-size:11.5px; color:var(--muted-2); line-height:1.85;
   }
-  footer a{ color:var(--muted); text-decoration:underline; }
+  footer a{ color:var(--muted); text-decoration:underline; text-underline-offset:2px; }
+
+  @media (max-width: 900px){
+    header{ top:12px; padding:0 14px; margin-top:14px; }
+    .island{ flex-direction:column; align-items:flex-start; gap:14px; border-radius:26px; padding:16px 18px; }
+    .island-right{ width:100%; justify-content:space-between; }
+    main{ grid-template-columns:1fr; padding:32px 14px 90px; gap:16px; }
+    .panel.wide{ grid-column:auto; }
+    .panel.wide .panel-body{ display:block; }
+  }
 
   @media (prefers-reduced-motion: reduce){
-    *{ animation:none !important; transition:none !important; }
+    *{ animation:none !important; transition:none !important; scroll-behavior:auto !important; }
   }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="header-row">
+  <div class="island">
     <div class="brand">
       <span class="dot"></span>
-      <h1>DevPulse</h1>
+      <span class="wordmark">DevPulse</span>
       <span class="eyebrow">personal feed</span>
     </div>
-    <div class="status">
-      <span id="clock">--:--:--</span>
-      <span id="last-sync">not synced yet</span>
+    <div class="island-right">
+      <div class="status">
+        <span id="clock">--:--:--</span>
+        <span class="sep-dot"></span>
+        <span id="last-sync">not synced yet</span>
+      </div>
+      <button class="refresh-all" id="refresh-all">
+        <span>refresh all</span>
+        <span class="btn-icon" aria-hidden="true">↻</span>
+      </button>
+      <label class="auto">
+        <input type="checkbox" id="auto-refresh">
+        auto 15m
+      </label>
     </div>
-  </div>
-  <div class="controls">
-    <button class="refresh-all" id="refresh-all">refresh all</button>
-    <label class="auto">
-      <input type="checkbox" id="auto-refresh">
-      auto-refresh every 15 min
-    </label>
   </div>
 </header>
 
 <main>
 
   <section class="panel">
-    <div class="panel-head">
-      <div class="panel-title"><h2>Hacker News</h2></div>
-      <div style="display:flex; align-items:center; gap:10px;">
-        <span class="panel-src">top stories</span>
-        <button class="panel-refresh" data-target="hn" title="Refresh">↻</button>
+    <div class="panel-core">
+      <div class="panel-head">
+        <div class="panel-title"><span class="eyebrow-tag">top stories</span><h2>Hacker News</h2></div>
+        <div class="panel-tools">
+          <button class="panel-refresh" data-target="hn" title="Refresh">↻</button>
+        </div>
       </div>
+      <div class="panel-body" id="body-hn"></div>
     </div>
-    <div class="panel-body" id="body-hn"></div>
   </section>
 
   <section class="panel">
-    <div class="panel-head">
-      <div class="panel-title"><h2>Reddit</h2></div>
-      <div style="display:flex; align-items:center; gap:10px;">
-        <span class="panel-src">r/programming + r/webdev</span>
-        <span class="panel-src" id="badge-reddit"></span>
-        <button class="panel-refresh" data-target="reddit" title="Refresh">↻</button>
+    <div class="panel-core">
+      <div class="panel-head">
+        <div class="panel-title"><span class="eyebrow-tag">r/programming · r/webdev</span><h2>Reddit</h2></div>
+        <div class="panel-tools">
+          <span class="panel-src" id="badge-reddit"></span>
+          <button class="panel-refresh" data-target="reddit" title="Refresh">↻</button>
+        </div>
       </div>
+      <div class="panel-body" id="body-reddit"></div>
     </div>
-    <div class="panel-body" id="body-reddit"></div>
   </section>
 
   <section class="panel">
-    <div class="panel-head">
-      <div class="panel-title"><h2>GitHub Trending</h2></div>
-      <div style="display:flex; align-items:center; gap:10px;">
-        <span class="panel-src">stars this week</span>
-        <button class="panel-refresh" data-target="github" title="Refresh">↻</button>
+    <div class="panel-core">
+      <div class="panel-head">
+        <div class="panel-title"><span class="eyebrow-tag">stars this week</span><h2>GitHub Trending</h2></div>
+        <div class="panel-tools">
+          <button class="panel-refresh" data-target="github" title="Refresh">↻</button>
+        </div>
       </div>
+      <div class="panel-body" id="body-github"></div>
     </div>
-    <div class="panel-body" id="body-github"></div>
   </section>
 
   <section class="panel">
-    <div class="panel-head">
-      <div class="panel-title"><h2>Free Game Deals</h2></div>
-      <div style="display:flex; align-items:center; gap:10px;">
-        <span class="panel-src" id="badge-games"></span>
-        <button class="panel-refresh" data-target="games" title="Refresh">↻</button>
+    <div class="panel-core">
+      <div class="panel-head">
+        <div class="panel-title"><span class="eyebrow-tag">free giveaways</span><h2>Free Game Deals</h2></div>
+        <div class="panel-tools">
+          <span class="panel-src" id="badge-games"></span>
+          <button class="panel-refresh" data-target="games" title="Refresh">↻</button>
+        </div>
       </div>
+      <div class="pill-row" id="pills-games"></div>
+      <div class="panel-body" id="body-games"></div>
     </div>
-    <div class="pill-row" id="pills-games"></div>
-    <div class="panel-body" id="body-games"></div>
   </section>
 
   <section class="panel wide">
-    <div class="panel-head">
-      <div class="panel-title"><h2>Research Papers</h2></div>
-      <div style="display:flex; align-items:center; gap:10px;">
-        <span class="panel-src">arXiv · newest first</span>
-        <span class="panel-src" id="badge-papers"></span>
-        <button class="panel-refresh" data-target="papers" title="Refresh">↻</button>
+    <div class="panel-core">
+      <div class="panel-head">
+        <div class="panel-title"><span class="eyebrow-tag">arXiv · newest first</span><h2>Research Papers</h2></div>
+        <div class="panel-tools">
+          <span class="panel-src" id="badge-papers"></span>
+          <button class="panel-refresh" data-target="papers" title="Refresh">↻</button>
+        </div>
       </div>
+      <div class="pill-row" id="pills-papers"></div>
+      <div class="panel-body" id="body-papers"></div>
     </div>
-    <div class="pill-row" id="pills-papers"></div>
-    <div class="panel-body" id="body-papers"></div>
   </section>
 
 </main>
 
 <footer>
   Nothing is stored — every request goes straight to the sources below.<br>
-  Hacker News and GitHub are called from your browser. Reddit and GamerPower send no CORS headers, so
+  Hacker News and GitHub are called from your browser. Reddit, GamerPower, and arXiv send no CORS headers, so
   they go through <code>/api</code> on this site; if that isn't reachable (opening this file from disk,
   say) they fall back to a public relay. The label next to each panel shows which one answered.<br>
-  Not affiliated with Reddit or GamerPower. Built for personal use.
+  Not affiliated with Reddit, GamerPower, or arXiv. Built for personal use.
 </footer>
 
 <script>
 (function(){
+
+  // Cards fade-up as they're drawn — unless the visitor asked for less motion,
+  // in which case they appear statically (the CSS reveal state is never added).
+  const motionOK = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function tickClock(){
     const el = document.getElementById('clock');
@@ -481,12 +495,12 @@
     el.style.color = via === 'server proxy' ? 'var(--accent)' : 'var(--muted-2)';
   }
 
-  // All four panels draw the same card — thumbnail, title, dot-separated meta.
+  // Every panel draws the same card — thumbnail, title, dot-separated meta.
   // toCard() maps one source's item onto those fields; `title` is inserted as
   // HTML so a caller can add markup, so callers escape it themselves.
   function card(c){
     const a = document.createElement('a');
-    a.className = 'card';
+    a.className = motionOK ? 'card reveal' : 'card';
     a.href = c.href;
     a.target = '_blank';
     a.rel = 'noopener';
@@ -499,6 +513,8 @@
                 .join('<span class="sep">·</span>') +
         '</div>' +
       '</div>';
+    // Two frames so the browser paints the hidden state before it transitions.
+    if(motionOK) requestAnimationFrame(() => requestAnimationFrame(() => a.classList.add('in')));
     return a;
   }
 

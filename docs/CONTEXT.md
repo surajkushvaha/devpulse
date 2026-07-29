@@ -25,7 +25,16 @@ Working and deployable to Vercel with zero config.
 Data path for Reddit/GamerPower: same-origin `/api` first, public CORS relay as
 fallback. Hacker News and GitHub are called directly from the browser.
 
-No build step, no lockfile, no dependencies.
+No build step, no lockfile, no runtime code dependencies. The one external asset
+is three Google Fonts (Space Grotesk / Plus Jakarta Sans / JetBrains Mono) loaded
+via `<link>` for the high-end visual design — every font stack falls back to
+system fonts if the CDN is unreachable. See DECISIONS.md.
+
+Visual language: "Soft Structuralism" — silver-white canvas with an ambient
+mesh, panels rendered as double-bezel trays (outer shell + white inner core)
+with soft ambient shadows, a floating glass "island" header, and one shared
+`cubic-bezier` easing for all motion (cards fade up on draw, reduced-motion
+aware).
 
 ## Open items
 
