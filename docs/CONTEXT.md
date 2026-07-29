@@ -31,15 +31,16 @@ Data path for Reddit/GamerPower/arXiv: same-origin `/api/<source>` first, public
 CORS relay as fallback. Hacker News and GitHub are called directly from the
 browser.
 
-Dependencies: `next` / `react` / `react-dom` only. Fonts (Space Grotesk / Plus
-Jakarta Sans / JetBrains Mono) are self-hosted at build via `next/font` — no
-runtime font-CDN request; every font stack falls back to system fonts.
+Dependencies: `next` / `react` / `react-dom` and `@phosphor-icons/react`. No web
+fonts — the UI uses the Apple system font stack (`-apple-system` → SF Pro on
+Apple platforms), so nothing is downloaded.
 
-Visual language: "Soft Structuralism" — silver-white canvas with an ambient
-mesh, panels rendered as double-bezel trays (outer shell + white inner core)
-with soft ambient shadows, a floating glass "island" header, and one shared
-`cubic-bezier` easing for all motion (cards fade up on draw via a CSS animation,
-reduced-motion aware).
+Visual language: an Apple **Liquid Glass** approximation — a colorful fixed
+wallpaper (blue/indigo/pink/green blobs) with translucent `backdrop-filter`
+glass surfaces (header island + panels), Apple system-blue accent, system-fill
+chips, and Apple label/fill/separator color semantics. Dark mode is true-black
+(iOS style). A `prefers-reduced-transparency` block swaps glass for solid fills;
+motion is reduced-motion aware.
 
 ## Panel paging model
 

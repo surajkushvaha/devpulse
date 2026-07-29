@@ -1,5 +1,46 @@
 # Decisions
 
+## [2026-07-29] Apple design language: system font + Liquid Glass
+
+**Context:** Request to adopt a full Apple design system — Apple sans fonts and
+Apple's "Liquid Glass" UI.
+
+**Fonts (honest constraint):** SF Pro is not licensed for web self-hosting and
+is not on Google Fonts, so it cannot be bundled via `next/font`. The authentic
+approach (what apple.com uses) is the **system font stack**: `-apple-system,
+BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue',
+system-ui` renders real SF Pro on Apple platforms and the native UI font
+everywhere else. So `next/font` was removed entirely — the app now downloads
+zero web fonts. Meta strips moved from a mono face to the system sans with
+`font-variant-numeric: tabular-nums`, matching how Apple sets numbers.
+
+**Liquid Glass (honest label):** there is no official Apple web material; this is
+the sanctioned web *approximation* — `backdrop-filter: blur() saturate()` for
+vibrancy, layered inner highlight + refractive hairline + hairline ring, over a
+colorful fixed wallpaper (soft blue/indigo/pink/green blobs) so the glass has
+something to refract. A `prefers-reduced-transparency: reduce` block drops the
+blur to a solid fill. Applied to the header island and every panel surface; the
+opaque double-bezel tray from the previous design is gone.
+
+**System alignment:** accent is now Apple system blue (#007aff light / #0a84ff
+dark); the primary "refresh all" button is an Apple-blue filled pill; chips are
+Apple system-fill pills that fill blue when active; colors are Apple label /
+fill / separator semantics; corners use Apple's larger radii. The dark theme is
+true-black-based (iOS style) rather than the previous charcoal.
+
+**Kept:** all structure, class names, and behavior — this is a CSS + layout-font
+change only; no component logic touched. Interactions and both themes verified
+in headless Chromium.
+
+**Note on the taste skill:** its Appendix C explicitly says Liquid Glass is an
+Apple-platform material with no official web package, and to label web versions
+as approximations — which is exactly what the code comments do.
+
+**Files touched:** `app/globals.css`, `app/layout.tsx`, `README.md`,
+`docs/CONTEXT.md`.
+
+---
+
 ## [2026-07-29] TypeScript + taste-skill UI review (dark mode, a11y, icons)
 
 **Context:** Two follow-ups: convert the fresh Next app to TypeScript (it had

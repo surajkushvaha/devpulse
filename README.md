@@ -2,7 +2,8 @@
 
 A lightweight web dashboard that aggregates developer news from five sources into
 one page. Built with **Next.js** (App Router), **React**, and **TypeScript**,
-deployed on Vercel. Light and dark themes (follows `prefers-color-scheme`).
+deployed on Vercel. An Apple-flavored **Liquid Glass** UI with the system (SF)
+font, light and dark themes (follows `prefers-color-scheme`).
 
 ## Features
 
@@ -26,9 +27,11 @@ upstream and passes the bytes back. Responses are CDN-cached for 5 minutes.
 If `/api` ever fails, the affected panels fall back to a public CORS relay. The
 label next to each panel shows which one answered.
 
-Fonts (Space Grotesk / Plus Jakarta Sans / JetBrains Mono) are self-hosted at
-build time via `next/font` — there is no runtime request to a font CDN, and
-every font stack falls back to system fonts.
+The UI uses the Apple system font stack (`-apple-system` renders SF Pro on Apple
+platforms, the native UI font elsewhere), so there are no web fonts to download
+at all. Surfaces are a web approximation of Apple's Liquid Glass material
+(`backdrop-filter` vibrancy over a colorful wallpaper), with a solid fallback
+under `prefers-reduced-transparency`.
 
 ## Running locally
 
@@ -68,8 +71,9 @@ override, no env vars. The page is served statically from the CDN and
 
 - Dependencies: `next` / `react` / `react-dom` and `@phosphor-icons/react`
   (latest); `typescript` pinned to the 6.x line Next supports
-- Fonts are self-hosted via `next/font` — no runtime font-CDN dependency
-- Light and dark themes; respects `prefers-color-scheme`
+- No web fonts — uses the Apple system font stack (SF on Apple devices)
+- Light and dark themes; respects `prefers-color-scheme` and
+  `prefers-reduced-transparency`
 - Not affiliated with Reddit, GamerPower, or arXiv
 - Respects `prefers-reduced-motion`
 - Reddit rate-limits datacenter IPs, so proxy responses are CDN-cached for 5 minutes
