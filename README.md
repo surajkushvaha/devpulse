@@ -1,7 +1,8 @@
 # DevPulse — Personal Feed
 
 A lightweight web dashboard that aggregates developer news from five sources into
-one page. Built with **Next.js** (App Router) and **React**, deployed on Vercel.
+one page. Built with **Next.js** (App Router), **React**, and **TypeScript**,
+deployed on Vercel. Light and dark themes (follows `prefers-color-scheme`).
 
 ## Features
 
@@ -46,13 +47,13 @@ override, no env vars. The page is served statically from the CDN and
 
 ## Project structure
 
-- **app/layout.jsx** — root layout; wires up `next/font` and global metadata
-- **app/page.jsx** — the dashboard (client component: header + panel grid)
-- **app/globals.css** — the whole design system (one file)
-- **app/api/[...proxy]/route.js** — the CORS proxy for Reddit + GamerPower + arXiv
-- **components/Header.jsx** — the fluid-island header (clock, sync, refresh, auto)
-- **components/Panel.jsx** — the reusable feed panel (paging, chips, states)
-- **lib/feeds.js** — source definitions, upstream parsers, and pager factories
+- **app/layout.tsx** — root layout; wires up `next/font` and global metadata
+- **app/page.tsx** — the dashboard (client component: header + panel grid)
+- **app/globals.css** — the whole design system, incl. light/dark tokens
+- **app/api/[...proxy]/route.ts** — the CORS proxy for Reddit + GamerPower + arXiv
+- **components/Header.tsx** — the fluid-island header (clock, sync, refresh, auto)
+- **components/Panel.tsx** — the reusable feed panel (paging, chips, states)
+- **lib/feeds.ts** — source definitions, upstream parsers, and pager factories
 - **public/favicon.ico**
 
 ## Data Sources
@@ -65,8 +66,10 @@ override, no env vars. The page is served statically from the CDN and
 
 ## Notes
 
-- Dependencies are kept to `next` / `react` / `react-dom` (latest)
+- Dependencies: `next` / `react` / `react-dom` and `@phosphor-icons/react`
+  (latest); `typescript` pinned to the 6.x line Next supports
 - Fonts are self-hosted via `next/font` — no runtime font-CDN dependency
+- Light and dark themes; respects `prefers-color-scheme`
 - Not affiliated with Reddit, GamerPower, or arXiv
 - Respects `prefers-reduced-motion`
 - Reddit rate-limits datacenter IPs, so proxy responses are CDN-cached for 5 minutes

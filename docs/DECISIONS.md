@@ -1,5 +1,52 @@
 # Decisions
 
+## [2026-07-29] TypeScript + taste-skill UI review (dark mode, a11y, icons)
+
+**Context:** Two follow-ups: convert the fresh Next app to TypeScript (it had
+been authored as `.jsx`/`.js` to match the old vanilla codebase, which no longer
+applies), and run the installed `design-taste-frontend` skill over the UI.
+
+**TypeScript:**
+- Converted every file to `.ts`/`.tsx` with real prop/model types (`Source`,
+  `CardModel`, `Pager`, `PanelProps`, etc.). Upstream payloads stay `any` —
+  they're heterogeneous external JSON and typing them fully buys nothing.
+- **TypeScript version:** npm's `latest` is now `7.0.2`, the native-port preview,
+  and Next 16 rejects it ("does not provide the compiler API required by
+  Next.js"). Pinned to the newest *stable* line Next supports, **6.0.3**.
+  "Latest, well-maintained" means the newest release that actually works with the
+  toolchain, not a preview that breaks the type-checker.
+
+**Taste review (honest scope):** the skill is explicitly for landing pages, "not
+dashboards," so only its universal rules were applied, not the hero/bento/image
+machinery. Findings acted on:
+- **Dark mode** added (the skill mandates it for consumer-facing pages). All
+  colours are semantic CSS variables now; a `prefers-color-scheme: dark` block
+  swaps the token set. Greys became concrete (not alpha-over-white) so text meets
+  WCAG AA in both modes.
+- **Em-dashes removed** from visible text (the skill's hard ban): the game card's
+  `FREE — title` is now a standalone `FREE` pill, footer sentences were split, and
+  the tab title uses a middle dot. Verified: zero `—` in the served HTML.
+- **Contrast:** eyebrow micro-labels moved from a 0.34-alpha grey (~2.5:1) to a
+  concrete AA-passing grey.
+- **Focus:** cards got a `:focus-visible` ring (keyboard a11y).
+- **Empty/error states** now compose to the panel center instead of floating at
+  the top-left of a tall panel.
+- **Icons:** the unicode `↻`/`→` glyphs became `@phosphor-icons/react`
+  (`ArrowClockwise`, `ArrowUpRight`) — the skill's recommended, actively
+  maintained icon family.
+- **Softened** the accent-coloured glow on active chips to a neutral shadow.
+
+**Deliberately kept (dashboard idiom, against a landing-page rule):** dot-separated
+meta strips and the brand pulse-dot. The skill rations middle-dots and bans
+decorative dots, but those rules target marketing pages; a compact data feed
+legitimately uses dot-separated metadata, and the pulse dot is the brand mark.
+
+**Files touched:** every source file (`.jsx`→`.tsx`, `.js`→`.ts`),
+`app/globals.css`, `tsconfig.json` (new), `package.json`, `README.md`,
+`docs/CONTEXT.md`.
+
+---
+
 ## [2026-07-29] Migrate from vanilla static + serverless to Next.js
 
 **Context:** The app was a single `public/index.html` plus a plain-node

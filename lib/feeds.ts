@@ -7,14 +7,49 @@
 // list is the source's own business. These run in the browser (Panel is a
 // client component), so DOMParser and same-origin /api are both available.
 
-export function timeAgo(unixSeconds) {
+export interface PillOption {
+  label: string;
+  value: string;
+}
+
+export interface CardModel {
+  href: string;
+  img: string | null;
+  letter: string;
+  badge?: string;
+  title: string;
+  meta: (string | false | null | undefined)[];
+}
+
+export type Pager = () => Promise<unknown[]> | unknown[];
+
+export interface FeedCtx {
+  setVia: (via: string) => void;
+}
+
+export interface Source {
+  key: string;
+  title: string;
+  eyebrow: string;
+  badge?: boolean;
+  wide?: boolean;
+  skeletonRows?: number;
+  pills?: { options: PillOption[]; initial: string };
+  emptyMessage?: string;
+  error: { href: string; label: string };
+  start: (ctx: FeedCtx, filter: string | null) => Promise<Pager>;
+  // Upstream payloads are heterogeneous JSON/XML shapes; each mapper knows its own.
+  toCard: (raw: any) => CardModel; // eslint-disable-line @typescript-eslint/no-explicit-any
+}
+
+export function timeAgo(unixSeconds: number): string {
   const diff = Math.floor(Date.now() / 1000) - unixSeconds;
   if (diff < 3600) return Math.max(1, Math.floor(diff / 60)) + 'm';
   if (diff < 86400) return Math.floor(diff / 3600) + 'h';
   return Math.floor(diff / 86400) + 'd';
 }
 
-function hnFavicon(url) {
+function hnFavicon(url?: string | null): string | null {
   if (!url) return null;
   try {
     const host = new URL(url).hostname;
@@ -24,7 +59,15 @@ function hnFavicon(url) {
   }
 }
 
-function parseRedditRss(xmlText) {
+interface RedditItem {
+  title: string;
+  href: string;
+  time: number;
+  thumbnail: string | null;
+  subreddit: string;
+}
+
+function parseRedditRss(xmlText: string): Omit<RedditItem, 'subreddit'>[] {
   const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
   return Array.from(doc.querySelectorAll('entry')).map((entry) => {
     const title = entry.querySelector('title')?.textContent || '';
@@ -43,11 +86,19 @@ function parseRedditRss(xmlText) {
       thumbnail = content.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1];
     }
     // Reddit puts 'self'/'default'/'nsfw' here when there is no real image.
-    return { title, href: link, time, thumbnail: /^https?:\/\//.test(thumbnail || '') ? thumbnail : null };
+    return { title, href: link, time, thumbnail: /^https?:\/\//.test(thumbnail || '') ? thumbnail! : null };
   });
 }
 
-function parseArxiv(xmlText) {
+interface ArxivItem {
+  title: string;
+  href: string;
+  time: number;
+  authors: string[];
+  primary: string;
+}
+
+function parseArxiv(xmlText: string): ArxivItem[] {
   const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
   return Array.from(doc.querySelectorAll('entry')).map((entry) => {
     // arXiv wraps titles across lines; collapse the whitespace back down.
@@ -56,7 +107,7 @@ function parseArxiv(xmlText) {
     const href = entry.querySelector('id')?.textContent || '';
     const published = entry.querySelector('published')?.textContent || '';
     const time = published ? Math.floor(Date.parse(published) / 1000) : Math.floor(Date.now() / 1000);
-    const authors = Array.from(entry.querySelectorAll('author > name')).map((n) => n.textContent);
+    const authors = Array.from(entry.querySelectorAll('author > name')).map((n) => n.textContent || '');
     // primary_category is namespaced (arxiv:); fall back to the first plain
     // <category> term, which every entry carries.
     const primary = entry.querySelector('primary_category, category')?.getAttribute('term') || '';
@@ -64,21 +115,25 @@ function parseArxiv(xmlText) {
   });
 }
 
-const RELAYS = [
+const RELAYS: ((u: string) => string)[] = [
   (u) => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
   (u) => 'https://corsproxy.io/?url=' + encodeURIComponent(u)
 ];
 
 // Same-origin /api is the primary path (the Next route handler). If it isn't
 // reachable, fall through to the public CORS relays.
-async function fetchProxied(apiPath, directUrl, as = 'json') {
+async function fetchProxied(
+  apiPath: string,
+  directUrl: string,
+  as: 'json' | 'text' = 'json'
+): Promise<{ data: any; via: string }> { // eslint-disable-line @typescript-eslint/no-explicit-any
   try {
     const res = await fetch('/api' + apiPath, { cache: 'no-store' });
     if (res.ok) return { data: await res[as](), via: 'server proxy' };
   } catch {
     /* no server proxy reachable — fall through */
   }
-  let lastErr;
+  let lastErr: unknown;
   for (const relay of RELAYS) {
     try {
       const res = await fetch(relay(directUrl));
@@ -93,7 +148,7 @@ async function fetchProxied(apiPath, directUrl, as = 'json') {
 
 // Game giveaways, grouped by store. GamerPower joins platforms with '+', and its
 // filter accepts every id below. The default keeps the classic epic+steam view.
-const GAME_PLATFORMS = [
+const GAME_PLATFORMS: PillOption[] = [
   { label: 'Epic + Steam', value: 'epic-games-store+steam' },
   { label: 'Steam', value: 'steam' },
   { label: 'Epic', value: 'epic-games-store' },
@@ -104,7 +159,7 @@ const GAME_PLATFORMS = [
 ];
 
 // arXiv categories, grouped by field. Each maps to one arXiv archive code.
-const PAPER_CATS = [
+const PAPER_CATS: PillOption[] = [
   { label: 'AI', value: 'cs.AI' },
   { label: 'Machine Learning', value: 'cs.LG' },
   { label: 'Computer Vision', value: 'cs.CV' },
@@ -113,7 +168,7 @@ const PAPER_CATS = [
   { label: 'Robotics', value: 'cs.RO' }
 ];
 
-export const SOURCES = [
+export const SOURCES: Source[] = [
   {
     key: 'hn',
     title: 'Hacker News',
@@ -125,7 +180,7 @@ export const SOURCES = [
       if (!idsRes.ok) throw new Error('HTTP ' + idsRes.status);
       // ~500 ids, but each story needs its own request, so fetch them in batches
       // as you scroll rather than firing 500 requests up front.
-      const ids = await idsRes.json();
+      const ids: number[] = await idsRes.json();
       let i = 0;
       return async () => {
         const batch = ids.slice(i, i + 20);
@@ -179,7 +234,7 @@ export const SOURCES = [
         return batch;
       };
     },
-    toCard: (p) => ({
+    toCard: (p: RedditItem) => ({
       href: p.href,
       img: p.thumbnail,
       letter: p.subreddit[0].toUpperCase(),
@@ -283,7 +338,7 @@ export const SOURCES = [
         return batch;
       };
     },
-    toCard: (p) => ({
+    toCard: (p: ArxivItem) => ({
       href: p.href,
       img: null,
       letter: (p.authors[0] || 'A')[0].toUpperCase(),

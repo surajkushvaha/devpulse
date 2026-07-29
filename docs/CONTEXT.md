@@ -4,7 +4,8 @@
 
 A developer news dashboard: Hacker News, Reddit, GitHub trending, free game
 giveaways, and arXiv research papers in five panels. A **Next.js** (App Router)
-+ **React** app deployed on Vercel.
++ **React** + **TypeScript** app deployed on Vercel, with light and dark themes
+(`prefers-color-scheme`).
 
 The game and paper panels carry a row of filter chips (`.pill`). Picking one
 sets the panel's `filter` state and reloads just that panel — games by store
@@ -14,15 +15,17 @@ sets the panel's `filter` state and reloads just that panel — games by store
 
 Working and deployable to Vercel (auto-detected framework, zero config).
 
-- `app/layout.jsx` — root layout; `next/font` (self-hosted fonts) + metadata
-- `app/page.jsx` — the dashboard client component (header + panel grid + footer)
-- `app/globals.css` — the entire design system in one file
-- `app/api/[...proxy]/route.js` — the only server-side code; a catch-all Route
+- `app/layout.tsx` — root layout; `next/font` (self-hosted fonts) + metadata
+- `app/page.tsx` — the dashboard client component (header + panel grid + footer)
+- `app/globals.css` — the entire design system; semantic CSS-variable tokens with
+  a `prefers-color-scheme: dark` override block
+- `app/api/[...proxy]/route.ts` — the only server-side code; a catch-all Route
   Handler proxying Reddit RSS, GamerPower, and the arXiv Atom API, none of which
   send CORS headers
-- `components/Header.jsx`, `components/Panel.jsx` — the header and the reusable
-  feed panel (paging, chips, loading/error/empty states)
-- `lib/feeds.js` — source descriptors, upstream parsers, pager factories
+- `components/Header.tsx`, `components/Panel.tsx` — the header and the reusable
+  feed panel (paging, chips, loading/error/empty states); icons from
+  `@phosphor-icons/react`
+- `lib/feeds.ts` — typed source descriptors, upstream parsers, pager factories
 
 Data path for Reddit/GamerPower/arXiv: same-origin `/api/<source>` first, public
 CORS relay as fallback. Hacker News and GitHub are called directly from the

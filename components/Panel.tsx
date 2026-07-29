@@ -1,12 +1,22 @@
 'use client';
 
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { ArrowClockwise, ArrowUpRight } from '@phosphor-icons/react';
+import type { CardModel, Pager, Source } from '../lib/feeds';
+
+interface PanelProps {
+  source: Source;
+  registerReload: (key: string, fn: (() => void) | null) => void;
+  onSync: () => void;
+}
+
+type Status = 'loading' | 'ready' | 'empty' | 'error';
 
 // Deterministic widths so the server and client render identical skeletons
 // (Math.random() here would trip a hydration mismatch).
 const SKELETON_WIDTHS = ['72%', '60%', '80%', '56%', '76%', '64%', '84%', '58%'];
 
-function Thumb({ url, letter }) {
+function Thumb({ url, letter }: { url: string | null; letter: string }) {
   const [failed, setFailed] = useState(false);
   const showImg = url && !failed;
   return (
@@ -17,19 +27,14 @@ function Thumb({ url, letter }) {
   );
 }
 
-function Card({ card }) {
-  const cells = card.meta.filter(Boolean);
+function Card({ card }: { card: CardModel }) {
+  const cells = card.meta.filter(Boolean) as string[];
   return (
     <a className="card" href={card.href} target="_blank" rel="noopener noreferrer">
       <Thumb url={card.img} letter={card.letter} />
       <div className="card-body">
         <div className="item-title">
-          {card.badge && (
-            <>
-              <span className="free-tag">{card.badge}</span>
-              {' — '}
-            </>
-          )}
+          {card.badge && <span className="free-tag">{card.badge}</span>}
           {card.title}
         </div>
         <div className="item-meta">
@@ -45,16 +50,16 @@ function Card({ card }) {
   );
 }
 
-export default function Panel({ source, registerReload, onSync }) {
-  const [cards, setCards] = useState([]);
-  const [status, setStatus] = useState('loading'); // loading | ready | empty | error
+export default function Panel({ source, registerReload, onSync }: PanelProps) {
+  const [cards, setCards] = useState<CardModel[]>([]);
+  const [status, setStatus] = useState<Status>('loading');
   const [errMsg, setErrMsg] = useState('');
-  const [via, setVia] = useState(null);
-  const [filter, setFilter] = useState(source.pills ? source.pills.initial : null);
+  const [via, setVia] = useState<string | null>(null);
+  const [filter, setFilter] = useState<string | null>(source.pills ? source.pills.initial : null);
 
-  const scrollRef = useRef(null);
-  const sentinelRef = useRef(null);
-  const pagerRef = useRef(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const pagerRef = useRef<Pager | null>(null);
   const doneRef = useRef(false);
   const busyRef = useRef(false);
   const countRef = useRef(0);
@@ -68,17 +73,17 @@ export default function Panel({ source, registerReload, onSync }) {
   // Pulls one batch and appends it. `myReq` tags the load so a refresh started
   // mid-flight discards whatever the previous one was still fetching.
   const loadMore = useCallback(
-    async (first, myReq) => {
+    async (first: boolean, myReq: number) => {
       if (busyRef.current || doneRef.current || myReq !== reqRef.current || !pagerRef.current) return;
       busyRef.current = true;
-      let batch;
+      let batch: unknown[];
       try {
         batch = await pagerRef.current();
       } catch (e) {
         doneRef.current = true;
         busyRef.current = false;
         if (first && myReq === reqRef.current) {
-          setErrMsg(e.message);
+          setErrMsg((e as Error).message);
           setStatus('error');
         }
         return;
@@ -113,7 +118,7 @@ export default function Panel({ source, registerReload, onSync }) {
     setStatus('loading');
     try {
       const ctx = {
-        setVia: (v) => {
+        setVia: (v: string) => {
           if (myReq === reqRef.current) setVia(v);
         }
       };
@@ -123,7 +128,7 @@ export default function Panel({ source, registerReload, onSync }) {
       await loadMore(true, myReq);
     } catch (e) {
       if (myReq === reqRef.current) {
-        setErrMsg(e.message);
+        setErrMsg((e as Error).message);
         setStatus('error');
       }
     }
@@ -183,12 +188,13 @@ export default function Panel({ source, registerReload, onSync }) {
             <button
               className="panel-refresh"
               title="Refresh"
+              aria-label={'Refresh ' + source.title}
               onClick={() => {
                 reload();
                 onSync();
               }}
             >
-              ↻
+              <ArrowClockwise size={15} weight="bold" />
             </button>
           </div>
         </div>
@@ -215,10 +221,12 @@ export default function Panel({ source, registerReload, onSync }) {
 
           {status === 'error' && (
             <div className="error">
-              Could not load {source.title} ({errMsg}).
-              <br />
+              <span>
+                Could not load {source.title} ({errMsg}).
+              </span>
               <a href={source.error.href} target="_blank" rel="noopener noreferrer">
-                {source.error.label} →
+                {source.error.label}
+                <ArrowUpRight size={12} weight="bold" />
               </a>
             </div>
           )}

@@ -6,11 +6,11 @@ import Panel from '../components/Panel';
 import { SOURCES } from '../lib/feeds';
 
 export default function Home() {
-  const reloadersRef = useRef({});
-  const [lastSync, setLastSync] = useState(null);
+  const reloadersRef = useRef<Record<string, () => void>>({});
+  const [lastSync, setLastSync] = useState<string | null>(null);
   const [autoOn, setAutoOn] = useState(false);
 
-  const registerReload = useCallback((key, fn) => {
+  const registerReload = useCallback((key: string, fn: (() => void) | null) => {
     if (fn) reloadersRef.current[key] = fn;
     else delete reloadersRef.current[key];
   }, []);
@@ -47,7 +47,7 @@ export default function Home() {
       </main>
 
       <footer>
-        Nothing is stored — every request goes straight to the sources below.
+        Nothing is stored. Every request goes straight to the sources below.
         <br />
         Hacker News and GitHub are called from your browser. Reddit, GamerPower, and arXiv send no CORS headers, so they
         go through <code>/api</code> on this site; if that isn&apos;t reachable they fall back to a public relay. The

@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { Space_Grotesk, Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 
@@ -22,13 +23,13 @@ const mono = JetBrains_Mono({
   display: 'swap'
 });
 
-export const metadata = {
-  title: 'DevPulse — Personal Feed',
+export const metadata: Metadata = {
+  title: 'DevPulse · Personal Feed',
   description:
-    'A lightweight personal feed aggregator for developers — Hacker News, Reddit, GitHub trending, free game deals, and arXiv research papers in one page.'
+    'A lightweight personal feed aggregator for developers: Hacker News, Reddit, GitHub trending, free game deals, and arXiv research papers in one page.'
 };
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${display.variable} ${sans.variable} ${mono.variable}`}>
       <body>{children}</body>

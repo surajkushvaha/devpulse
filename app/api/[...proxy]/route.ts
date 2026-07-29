@@ -12,12 +12,12 @@ const UA = 'devpulse-dashboard/2.0';
 
 // Query values land in a URL, so every one of them is scrubbed here.
 // 100 is Reddit's own listing ceiling; anything above it is pointless.
-const clamp = (v, fallback) => {
-  const n = parseInt(v, 10);
+const clamp = (v: string | null, fallback: number): number => {
+  const n = parseInt(v ?? '', 10);
   return Number.isFinite(n) && n > 0 && n <= 100 ? n : fallback;
 };
 
-const ROUTES = {
+const ROUTES: Record<string, (q: URLSearchParams) => [string, string]> = {
   reddit: (q) => [
     'https://www.reddit.com/r/' +
       encodeURIComponent(q.get('sub') || 'programming') +
@@ -42,8 +42,8 @@ const ROUTES = {
   ]
 };
 
-export async function GET(req, { params }) {
-  // Next 15 hands params in as a promise; awaiting a plain object is harmless.
+export async function GET(req: Request, { params }: { params: Promise<{ proxy: string[] }> }) {
+  // Next 15+ hands params in as a promise.
   const { proxy } = await params;
   const key = Array.isArray(proxy) ? proxy[proxy.length - 1] : proxy;
   const route = ROUTES[key];
@@ -77,7 +77,7 @@ export async function GET(req, { params }) {
       }
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: (err as Error).message }), {
       status: 502,
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
