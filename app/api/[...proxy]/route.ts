@@ -17,6 +17,13 @@ const clamp = (v: string | null, fallback: number): number => {
   return Number.isFinite(n) && n > 0 && n <= 100 ? n : fallback;
 };
 
+// arXiv paging offset — 0-based, with a generous ceiling so the papers feed can
+// scroll deep without letting an arbitrary value through.
+const clampStart = (v: string | null): number => {
+  const n = parseInt(v ?? '', 10);
+  return Number.isFinite(n) && n >= 0 && n <= 2000 ? n : 0;
+};
+
 const ROUTES: Record<string, (q: URLSearchParams) => [string, string]> = {
   reddit: (q) => [
     'https://www.reddit.com/r/' +
@@ -37,7 +44,8 @@ const ROUTES: Record<string, (q: URLSearchParams) => [string, string]> = {
     // A category is 'cs.AI'-shaped, so dots survive but nothing else does.
     'https://export.arxiv.org/api/query?search_query=cat:' +
       (q.get('cat') || 'cs.AI').replace(/[^a-z0-9.]/gi, '') +
-      '&sortBy=submittedDate&sortOrder=descending&start=0&max_results=' + clamp(q.get('limit'), 40),
+      '&sortBy=submittedDate&sortOrder=descending&start=' + clampStart(q.get('start')) +
+      '&max_results=' + clamp(q.get('limit'), 25),
     'application/atom+xml; charset=utf-8'
   ]
 };

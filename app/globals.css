@@ -21,11 +21,19 @@
   --on-accent:#ffffff;
 
   /* Liquid glass material */
-  --glass:rgba(255,255,255,0.55);
+  --glass:rgba(255,255,255,0.32);        /* translucent enough to refract the wallpaper */
   --glass-solid:#ffffff;                 /* reduced-transparency fallback */
-  --glass-hi:rgba(255,255,255,0.75);     /* top inner highlight */
-  --glass-edge:rgba(255,255,255,0.5);    /* refractive hairline */
-  --glass-ring:rgba(0,0,0,0.05);
+  --glass-hi:rgba(255,255,255,0.95);     /* bright top edge (light catch) */
+  --glass-edge:rgba(255,255,255,0.65);   /* refractive hairline */
+  --glass-ring:rgba(0,0,0,0.07);
+  --glass-depth:rgba(20,24,44,0.16);     /* inner bottom shadow — glass thickness */
+  --sheen:linear-gradient(135deg, rgba(255,255,255,0.42), rgba(255,255,255,0.08) 34%, rgba(255,255,255,0) 60%);
+  /* Base blur/vibrancy always applies. --glass-refract adds the SVG displacement
+     (real refraction) only where the browser supports url() in backdrop-filter;
+     it stays empty otherwise, so the panel never loses its blur. */
+  --glass-blur:blur(18px) saturate(210%) brightness(1.05);
+  --glass-refract: ;
+  --glass-filter:var(--glass-blur) var(--glass-refract);
   --glass-shadow:0 2px 6px rgba(20,24,44,0.05), 0 22px 50px -22px rgba(20,24,44,0.3);
   --glass-shadow-lift:0 4px 10px rgba(20,24,44,0.07), 0 34px 70px -26px rgba(20,24,44,0.4);
 
@@ -55,11 +63,14 @@
     --accent:#0a84ff;
     --accent-2:#7d7aff;
 
-    --glass:rgba(44,44,48,0.5);
+    --glass:rgba(30,30,38,0.42);
     --glass-solid:#1c1c1e;
-    --glass-hi:rgba(255,255,255,0.14);
-    --glass-edge:rgba(255,255,255,0.12);
-    --glass-ring:rgba(0,0,0,0.5);
+    --glass-hi:rgba(255,255,255,0.2);
+    --glass-edge:rgba(255,255,255,0.16);
+    --glass-ring:rgba(0,0,0,0.55);
+    --glass-depth:rgba(0,0,0,0.4);
+    --sheen:linear-gradient(135deg, rgba(255,255,255,0.16), rgba(255,255,255,0.03) 38%, rgba(255,255,255,0) 62%);
+    --glass-blur:blur(24px) saturate(190%) brightness(1.14);
     --glass-shadow:0 2px 8px rgba(0,0,0,0.4), 0 24px 54px -22px rgba(0,0,0,0.7);
     --glass-shadow-lift:0 4px 12px rgba(0,0,0,0.5), 0 36px 74px -26px rgba(0,0,0,0.8);
 
@@ -70,37 +81,66 @@
   }
 }
 
+/* Real refraction: warp the backdrop through an SVG displacement filter (the
+   technique behind Apple's Liquid Glass), enabled only where url() backdrop
+   filters are supported so unsupported browsers keep the plain frosted glass. */
+@supports (backdrop-filter: url("#g")) or (-webkit-backdrop-filter: url("#g")){
+  :root{ --glass-refract:url(#glass-distortion); }
+}
+
 *{ box-sizing:border-box; }
 
 html{ scroll-behavior:smooth; }
 
+/* Base color goes on <html> only. <body> stays transparent so the fixed
+   z-index:-1 wallpaper (body::before) shows through instead of being covered
+   by an opaque body background. */
+html{ background:var(--wall); }
+
 html,body{
   margin:0; padding:0;
-  background:var(--wall);
   color:var(--label);
   font-family:var(--sans);
   min-height:100dvh;
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeLegibility;
 }
+/* Explicit + !important so the CSS optimizer can't fold the base color back
+   onto <body> and cover the fixed z-index:-1 wallpaper. */
+body{ background:transparent !important; }
 
-/* Apple-style wallpaper: soft saturated blobs so the glass has color to refract.
-   Fixed + pointer-events:none keeps it off the scroll repaint path. */
+/* Apple-style wallpaper: full-coverage saturated blobs — including the CENTER,
+   so every glass panel has color directly behind it to refract, not just the
+   edges. It drifts slowly so the color visibly shifts through the frost. Fixed +
+   pointer-events:none + transform-only animation keeps it off the repaint path.
+   inset:-12% gives the drift room without exposing bare edges. */
 body::before{
   content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  /* Color glows in ALL FOUR corners + center so the whole screen carries color,
+     top AND bottom. inset:0 covers the viewport exactly; the drift is a center
+     scale (>=1) so it never exposes a bare edge or pushes blobs off-screen. */
   background:
-    radial-gradient(46% 40% at 14% 8%, rgba(0,122,255,0.30), transparent 60%),
-    radial-gradient(44% 38% at 88% 2%, rgba(94,92,230,0.28), transparent 62%),
-    radial-gradient(50% 42% at 98% 92%, rgba(255,45,85,0.20), transparent 64%),
-    radial-gradient(48% 40% at 4% 98%, rgba(48,209,88,0.18), transparent 64%);
+    radial-gradient(42% 46% at 10% 8%, rgba(0,122,255,0.6), transparent 60%),
+    radial-gradient(42% 46% at 90% 12%, rgba(94,92,230,0.55), transparent 60%),
+    radial-gradient(46% 48% at 12% 90%, rgba(0,199,190,0.5), transparent 60%),
+    radial-gradient(46% 48% at 90% 88%, rgba(175,82,222,0.55), transparent 60%),
+    radial-gradient(55% 45% at 50% 50%, rgba(255,45,85,0.3), transparent 66%),
+    linear-gradient(160deg, #dde7ff 0%, #ebe2ff 40%, #ffe6f1 72%, #dff7f2 100%);
+  animation:drift 30s ease-in-out infinite;
+}
+@keyframes drift{
+  0%,100%{ transform:scale(1); }
+  50%{ transform:scale(1.08); }
 }
 @media (prefers-color-scheme: dark){
   body::before{
     background:
-      radial-gradient(46% 40% at 14% 8%, rgba(10,132,255,0.4), transparent 60%),
-      radial-gradient(44% 38% at 88% 2%, rgba(125,122,255,0.34), transparent 62%),
-      radial-gradient(50% 42% at 98% 92%, rgba(255,55,95,0.26), transparent 64%),
-      radial-gradient(48% 40% at 4% 98%, rgba(48,209,88,0.22), transparent 64%);
+      radial-gradient(42% 46% at 10% 8%, rgba(10,132,255,0.55), transparent 60%),
+      radial-gradient(42% 46% at 90% 12%, rgba(125,122,255,0.5), transparent 60%),
+      radial-gradient(46% 48% at 12% 90%, rgba(0,199,190,0.42), transparent 60%),
+      radial-gradient(46% 48% at 90% 88%, rgba(191,90,242,0.52), transparent 60%),
+      radial-gradient(55% 45% at 50% 50%, rgba(255,55,95,0.26), transparent 66%),
+      linear-gradient(160deg, #0a1226 0%, #0f0b20 42%, #150b1b 72%, #08131f 100%);
   }
 }
 
@@ -110,9 +150,9 @@ code{ font-family:var(--mono); font-size:0.9em; color:var(--accent); background:
 
 /* Shared liquid-glass surface. */
 .glass{
-  background:var(--glass);
-  backdrop-filter:blur(var(--blur)) saturate(180%);
-  -webkit-backdrop-filter:blur(var(--blur)) saturate(180%);
+  background:var(--sheen), var(--glass);
+  backdrop-filter:var(--glass-filter);
+  -webkit-backdrop-filter:var(--glass-filter);
   box-shadow:
     inset 0 1px 0 var(--glass-hi),
     inset 0 0 0 1px var(--glass-edge),
@@ -123,15 +163,15 @@ code{ font-family:var(--mono); font-size:0.9em; color:var(--accent); background:
 /* ── Fluid Island header ─────────────────────────────────────────────── */
 header{
   position:sticky; top:18px; z-index:100;
-  max-width:1160px; margin:18px auto 0; padding:0 20px;
+  max-width:1200px; margin:18px auto 0; padding:0 20px;
 }
 .island{
   display:flex; align-items:center; justify-content:space-between;
-  gap:20px; flex-wrap:wrap;
+  gap:16px 20px; min-width:0;
   padding:10px 12px 10px 22px; border-radius:999px;
-  background:var(--glass);
-  backdrop-filter:blur(var(--blur)) saturate(180%);
-  -webkit-backdrop-filter:blur(var(--blur)) saturate(180%);
+  background:var(--sheen), var(--glass);
+  backdrop-filter:var(--glass-filter);
+  -webkit-backdrop-filter:var(--glass-filter);
   box-shadow:
     inset 0 1px 0 var(--glass-hi),
     inset 0 0 0 1px var(--glass-edge),
@@ -153,8 +193,8 @@ header{
   color:var(--accent); background:var(--fill); padding:4px 9px; border-radius:999px;
 }
 
-.island-right{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
-.status{ font-size:12px; color:var(--label-2); display:flex; align-items:center; gap:9px; font-variant-numeric:tabular-nums; }
+.island-right{ display:flex; align-items:center; gap:14px; min-width:0; }
+.status{ font-size:12px; color:var(--label-2); display:flex; align-items:center; gap:9px; font-variant-numeric:tabular-nums; white-space:nowrap; }
 #clock{ color:var(--label); font-weight:600; }
 .sep-dot{ width:3px; height:3px; border-radius:50%; background:var(--label-3); }
 
@@ -189,17 +229,18 @@ main{
 /* ── Panel: liquid-glass surface ─────────────────────────────────────── */
 .panel{ background:transparent; border-radius:var(--r-surface); }
 .panel-core{
-  background:var(--glass);
-  backdrop-filter:blur(var(--blur)) saturate(180%);
-  -webkit-backdrop-filter:blur(var(--blur)) saturate(180%);
+  background:var(--sheen), var(--glass);
+  backdrop-filter:var(--glass-filter);
+  -webkit-backdrop-filter:var(--glass-filter);
   border-radius:var(--r-surface);
   box-shadow:
     inset 0 1px 0 var(--glass-hi),
     inset 0 0 0 1px var(--glass-edge),
+    inset 0 -16px 30px -22px var(--glass-depth),
     0 0 0 1px var(--glass-ring),
     var(--glass-shadow);
   display:flex; flex-direction:column;
-  min-height:360px; max-height:564px; overflow:hidden;
+  height:440px; overflow:hidden;   /* uniform bento: every regular panel matches */
   transition:transform var(--ease) .5s, box-shadow var(--ease) .5s;
 }
 .panel:hover .panel-core{
@@ -207,12 +248,13 @@ main{
   box-shadow:
     inset 0 1px 0 var(--glass-hi),
     inset 0 0 0 1px var(--glass-edge),
+    inset 0 -16px 30px -22px var(--glass-depth),
     0 0 0 1px var(--glass-ring),
     var(--glass-shadow-lift);
 }
 
 .panel.wide{ grid-column:1 / -1; }
-.panel.wide .panel-core{ min-height:300px; max-height:600px; }
+.panel.wide .panel-core{ height:560px; }   /* featured rows: taller, span both columns */
 .panel.wide .panel-body{
   display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); align-content:start;
 }

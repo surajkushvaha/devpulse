@@ -1,5 +1,123 @@
 # Decisions
 
+## [2026-07-30] Fix: background gradient now actually covers the full screen
+
+**Context:** The wallpaper only showed at the top of the screen; below the first
+panels it was flat/black.
+
+**Root cause:** the wallpaper is a `position: fixed; z-index:-1` `body::before`.
+`html,body { background: var(--wall) }` gave `<body>` an *opaque* background that
+painted over the negative-z-index pseudo-element, so only a sliver showed. Worse,
+Next's CSS optimizer kept folding a standalone `html { background }` rule back
+into `html,body { background }`, re-covering it.
+
+**Fix:** base color lives on `<html>` only; `<body>` is explicitly transparent
+(`background: transparent !important` in source — the optimizer strips the
+redundant value but the net result is a transparent body, verified in the built
+CSS). Also switched the wallpaper from `inset:-12%` (which pushed the bottom
+color-blobs below the viewport) to `inset:0` with a center-`scale` drift that
+never exposes a bare edge, and put strong color glows in all four corners so the
+whole viewport carries color. Verified by isolating the raw `body::before`: a
+full-screen mesh, top to bottom.
+
+**Files touched:** `app/globals.css`, `docs/DECISIONS.md`.
+
+---
+
+## [2026-07-30] All six panels equal (3x2), full-screen background gradient
+
+**Context:** The two feature feeds (Tech Feed, Research Papers) spanned full
+width, which read as inconsistent — the user wanted all six panels uniform.
+
+**Decision:**
+- Dropped `wide: true` from the tech and papers sources, so all six panels are
+  regular cells: a clean uniform **3x2 bento** (HN | Reddit, GitHub | Games, Tech
+  | Papers), every panel the same 440px. The `.panel.wide` CSS is now unused but
+  left in place (harmless) in case a featured row is wanted again.
+- Added a **full-screen base gradient** beneath the color-blob mesh in
+  `body::before` (a soft diagonal blue → lavender → pink → mint in light, deep
+  navy → purple → ink in dark), so the whole viewport carries color, not just the
+  blob hotspots.
+
+**Files touched:** `lib/feeds.ts`, `app/globals.css`, `docs/CONTEXT.md`.
+
+---
+
+## [2026-07-30] Uniform bento layout + SVG-displacement liquid glass
+
+**Context:** The 2x2 grid looked ragged — panels had different content heights,
+so a short panel (Reddit, Free Game Deals) left an empty gap beside a tall one
+(Hacker News, GitHub). Researched layout references (bento vs masonry) and the
+real Apple Liquid Glass technique, then applied both fixes the user asked for.
+
+**Uniform bento:** per the references, a bento grid is strict and uniform-height
+(masonry is the variable-height Pinterest pattern, heavier and worse for reading
+order). Gave every regular panel a fixed `height:440px` and the two full-width
+feature rows (Tech Feed, Research Papers) `height:560px`. The grid rows are now
+even; each panel scrolls internally as before. Tradeoff: a short feed (Free Game
+Deals, ~3 items) has empty space below its content — the accepted cost of uniform
+heights over ragged gaps. (Masonry would fill the gaps but hurts a11y/order.)
+
+**SVG-displacement glass:** the real WWDC-2025 Liquid Glass warps the backdrop
+with an SVG `feDisplacementMap`, not just `backdrop-filter: blur`. Added an inline
+SVG filter (`#glass-distortion`: fractal-noise turbulence → displacement) in the
+root layout and layered it into the glass `backdrop-filter`. It's a **progressive
+enhancement**: the base blur/saturate/brightness always applies, and the
+displacement is switched on only inside `@supports (backdrop-filter: url())` via
+an otherwise-empty `--glass-refract` variable, so browsers without url() backdrop
+support keep clean frosted glass instead of losing the blur. Verified the
+refraction renders in Chromium (wallpaper color visibly warps at panel/header
+edges); it degrades gracefully elsewhere.
+
+**Verified:** `next build` green; headless screenshots (light + dark) show an even
+2x2 grid and visible edge refraction.
+
+**Files touched:** `app/globals.css`, `app/layout.tsx`, `docs/DECISIONS.md`.
+
+---
+
+## [2026-07-30] Bluesky tech feed, infinite-scroll papers, header fix
+
+**Context:** Add a "twitter feed" of latest tech updates, make the games and
+research-paper panels scroll infinitely, and fix the header.
+
+**Twitter → Bluesky:** X/Twitter has no free, unauthenticated public feed (the
+v2 API needs paid credentials, and Nitter is effectively dead), so a real Twitter
+feed isn't buildable without keys. Used **Bluesky** instead — the open,
+twitter-style network where the tech community is active. Its public AppView
+(`public.api.bsky.app/xrpc/app.bsky.feed.searchPosts`) needs no auth, is
+CORS-enabled (so the browser calls it directly), and paginates by cursor. Query
+is `q=technology&sort=latest`; the new **Tech Feed** panel is a full-width
+feature row alongside Research Papers.
+
+**Infinite scroll:**
+- **Research Papers** now pages arXiv for real — each `next()` fetches the next
+  `start`/`max_results` window and stops on a short page (the proxy `papers`
+  route gained a scrubbed `start` param). Previously it fetched 40 once and
+  stopped; now it's unbounded.
+- **Bluesky** pages by cursor — genuinely infinite.
+- **Free Game Deals** was asked for too, but GamerPower has no pagination: it
+  returns every active giveaway in one response. The panel already shows all of
+  them and scrolls; there is nothing further upstream to fetch, so it's left as
+  is (documented, not a regression).
+
+**Header fix:** aligned the island's `max-width` to the content grid (1160 → 1200)
+so its right edge lines up with the panels, and removed the `flex-wrap` that let
+the pill wrap to two lines at some widths — the mobile breakpoint (≤900px) still
+stacks it cleanly. Verified the island renders as a single 60px line.
+
+**Layout:** the bento is now four regular panels (2×2) above two full-width
+feature rows (Tech Feed, Research Papers) — no empty cells.
+
+**Verified:** `next build` green; headless run with Bluesky + paged arXiv stubbed
+shows the tech feed rendering, papers growing 25 → 58 cards on scroll, a
+single-line header, and no JS errors.
+
+**Files touched:** `lib/feeds.ts`, `app/api/[...proxy]/route.ts`,
+`app/globals.css`, `README.md`, `docs/CONTEXT.md`.
+
+---
+
 ## [2026-07-29] Apple design language: system font + Liquid Glass
 
 **Context:** Request to adopt a full Apple design system — Apple sans fonts and

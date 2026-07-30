@@ -21,7 +21,24 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {/* SVG displacement filter powering the Liquid Glass refraction (referenced
+            from CSS as url(#glass-distortion)). Visually hidden, present once. */}
+        <svg
+          aria-hidden="true"
+          focusable="false"
+          style={{ position: 'absolute', width: 0, height: 0, pointerEvents: 'none' }}
+        >
+          <defs>
+            <filter id="glass-distortion" x="-25%" y="-25%" width="150%" height="150%" colorInterpolationFilters="sRGB">
+              <feTurbulence type="fractalNoise" baseFrequency="0.006 0.011" numOctaves={2} seed={7} result="noise" />
+              <feGaussianBlur in="noise" stdDeviation="1.4" result="soft" />
+              <feDisplacementMap in="SourceGraphic" in2="soft" scale="52" xChannelSelector="R" yChannelSelector="G" />
+            </filter>
+          </defs>
+        </svg>
+        {children}
+      </body>
     </html>
   );
 }
