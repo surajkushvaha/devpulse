@@ -28,7 +28,12 @@
   --glass-ring:rgba(0,0,0,0.07);
   --glass-depth:rgba(20,24,44,0.16);     /* inner bottom shadow — glass thickness */
   --sheen:linear-gradient(135deg, rgba(255,255,255,0.42), rgba(255,255,255,0.08) 34%, rgba(255,255,255,0) 60%);
-  --glass-filter:blur(26px) saturate(210%) brightness(1.05);
+  /* Base blur/vibrancy always applies. --glass-refract adds the SVG displacement
+     (real refraction) only where the browser supports url() in backdrop-filter;
+     it stays empty otherwise, so the panel never loses its blur. */
+  --glass-blur:blur(18px) saturate(210%) brightness(1.05);
+  --glass-refract: ;
+  --glass-filter:var(--glass-blur) var(--glass-refract);
   --glass-shadow:0 2px 6px rgba(20,24,44,0.05), 0 22px 50px -22px rgba(20,24,44,0.3);
   --glass-shadow-lift:0 4px 10px rgba(20,24,44,0.07), 0 34px 70px -26px rgba(20,24,44,0.4);
 
@@ -65,7 +70,7 @@
     --glass-ring:rgba(0,0,0,0.55);
     --glass-depth:rgba(0,0,0,0.4);
     --sheen:linear-gradient(135deg, rgba(255,255,255,0.16), rgba(255,255,255,0.03) 38%, rgba(255,255,255,0) 62%);
-    --glass-filter:blur(28px) saturate(190%) brightness(1.14);
+    --glass-blur:blur(24px) saturate(190%) brightness(1.14);
     --glass-shadow:0 2px 8px rgba(0,0,0,0.4), 0 24px 54px -22px rgba(0,0,0,0.7);
     --glass-shadow-lift:0 4px 12px rgba(0,0,0,0.5), 0 36px 74px -26px rgba(0,0,0,0.8);
 
@@ -74,6 +79,13 @@
     --hover:rgba(120,120,128,0.2);
     --scroll:rgba(120,120,128,0.5);
   }
+}
+
+/* Real refraction: warp the backdrop through an SVG displacement filter (the
+   technique behind Apple's Liquid Glass), enabled only where url() backdrop
+   filters are supported so unsupported browsers keep the plain frosted glass. */
+@supports (backdrop-filter: url("#g")) or (-webkit-backdrop-filter: url("#g")){
+  :root{ --glass-refract:url(#glass-distortion); }
 }
 
 *{ box-sizing:border-box; }
@@ -219,7 +231,7 @@ main{
     0 0 0 1px var(--glass-ring),
     var(--glass-shadow);
   display:flex; flex-direction:column;
-  min-height:360px; max-height:564px; overflow:hidden;
+  height:440px; overflow:hidden;   /* uniform bento: every regular panel matches */
   transition:transform var(--ease) .5s, box-shadow var(--ease) .5s;
 }
 .panel:hover .panel-core{
@@ -233,7 +245,7 @@ main{
 }
 
 .panel.wide{ grid-column:1 / -1; }
-.panel.wide .panel-core{ min-height:300px; max-height:600px; }
+.panel.wide .panel-core{ height:560px; }   /* featured rows: taller, span both columns */
 .panel.wide .panel-body{
   display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); align-content:start;
 }

@@ -1,5 +1,38 @@
 # Decisions
 
+## [2026-07-30] Uniform bento layout + SVG-displacement liquid glass
+
+**Context:** The 2x2 grid looked ragged — panels had different content heights,
+so a short panel (Reddit, Free Game Deals) left an empty gap beside a tall one
+(Hacker News, GitHub). Researched layout references (bento vs masonry) and the
+real Apple Liquid Glass technique, then applied both fixes the user asked for.
+
+**Uniform bento:** per the references, a bento grid is strict and uniform-height
+(masonry is the variable-height Pinterest pattern, heavier and worse for reading
+order). Gave every regular panel a fixed `height:440px` and the two full-width
+feature rows (Tech Feed, Research Papers) `height:560px`. The grid rows are now
+even; each panel scrolls internally as before. Tradeoff: a short feed (Free Game
+Deals, ~3 items) has empty space below its content — the accepted cost of uniform
+heights over ragged gaps. (Masonry would fill the gaps but hurts a11y/order.)
+
+**SVG-displacement glass:** the real WWDC-2025 Liquid Glass warps the backdrop
+with an SVG `feDisplacementMap`, not just `backdrop-filter: blur`. Added an inline
+SVG filter (`#glass-distortion`: fractal-noise turbulence → displacement) in the
+root layout and layered it into the glass `backdrop-filter`. It's a **progressive
+enhancement**: the base blur/saturate/brightness always applies, and the
+displacement is switched on only inside `@supports (backdrop-filter: url())` via
+an otherwise-empty `--glass-refract` variable, so browsers without url() backdrop
+support keep clean frosted glass instead of losing the blur. Verified the
+refraction renders in Chromium (wallpaper color visibly warps at panel/header
+edges); it degrades gracefully elsewhere.
+
+**Verified:** `next build` green; headless screenshots (light + dark) show an even
+2x2 grid and visible edge refraction.
+
+**Files touched:** `app/globals.css`, `app/layout.tsx`, `docs/DECISIONS.md`.
+
+---
+
 ## [2026-07-30] Bluesky tech feed, infinite-scroll papers, header fix
 
 **Context:** Add a "twitter feed" of latest tech updates, make the games and
