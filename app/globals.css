@@ -21,11 +21,14 @@
   --on-accent:#ffffff;
 
   /* Liquid glass material */
-  --glass:rgba(255,255,255,0.55);
+  --glass:rgba(255,255,255,0.32);        /* translucent enough to refract the wallpaper */
   --glass-solid:#ffffff;                 /* reduced-transparency fallback */
-  --glass-hi:rgba(255,255,255,0.75);     /* top inner highlight */
-  --glass-edge:rgba(255,255,255,0.5);    /* refractive hairline */
-  --glass-ring:rgba(0,0,0,0.05);
+  --glass-hi:rgba(255,255,255,0.95);     /* bright top edge (light catch) */
+  --glass-edge:rgba(255,255,255,0.65);   /* refractive hairline */
+  --glass-ring:rgba(0,0,0,0.07);
+  --glass-depth:rgba(20,24,44,0.16);     /* inner bottom shadow — glass thickness */
+  --sheen:linear-gradient(135deg, rgba(255,255,255,0.42), rgba(255,255,255,0.08) 34%, rgba(255,255,255,0) 60%);
+  --glass-filter:blur(26px) saturate(210%) brightness(1.05);
   --glass-shadow:0 2px 6px rgba(20,24,44,0.05), 0 22px 50px -22px rgba(20,24,44,0.3);
   --glass-shadow-lift:0 4px 10px rgba(20,24,44,0.07), 0 34px 70px -26px rgba(20,24,44,0.4);
 
@@ -55,11 +58,14 @@
     --accent:#0a84ff;
     --accent-2:#7d7aff;
 
-    --glass:rgba(44,44,48,0.5);
+    --glass:rgba(30,30,38,0.42);
     --glass-solid:#1c1c1e;
-    --glass-hi:rgba(255,255,255,0.14);
-    --glass-edge:rgba(255,255,255,0.12);
-    --glass-ring:rgba(0,0,0,0.5);
+    --glass-hi:rgba(255,255,255,0.2);
+    --glass-edge:rgba(255,255,255,0.16);
+    --glass-ring:rgba(0,0,0,0.55);
+    --glass-depth:rgba(0,0,0,0.4);
+    --sheen:linear-gradient(135deg, rgba(255,255,255,0.16), rgba(255,255,255,0.03) 38%, rgba(255,255,255,0) 62%);
+    --glass-filter:blur(28px) saturate(190%) brightness(1.14);
     --glass-shadow:0 2px 8px rgba(0,0,0,0.4), 0 24px 54px -22px rgba(0,0,0,0.7);
     --glass-shadow-lift:0 4px 12px rgba(0,0,0,0.5), 0 36px 74px -26px rgba(0,0,0,0.8);
 
@@ -84,23 +90,36 @@ html,body{
   text-rendering:optimizeLegibility;
 }
 
-/* Apple-style wallpaper: soft saturated blobs so the glass has color to refract.
-   Fixed + pointer-events:none keeps it off the scroll repaint path. */
+/* Apple-style wallpaper: full-coverage saturated blobs — including the CENTER,
+   so every glass panel has color directly behind it to refract, not just the
+   edges. It drifts slowly so the color visibly shifts through the frost. Fixed +
+   pointer-events:none + transform-only animation keeps it off the repaint path.
+   inset:-12% gives the drift room without exposing bare edges. */
 body::before{
-  content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  content:''; position:fixed; inset:-12%; z-index:-1; pointer-events:none;
   background:
-    radial-gradient(46% 40% at 14% 8%, rgba(0,122,255,0.30), transparent 60%),
-    radial-gradient(44% 38% at 88% 2%, rgba(94,92,230,0.28), transparent 62%),
-    radial-gradient(50% 42% at 98% 92%, rgba(255,45,85,0.20), transparent 64%),
-    radial-gradient(48% 40% at 4% 98%, rgba(48,209,88,0.18), transparent 64%);
+    radial-gradient(34% 32% at 16% 12%, rgba(0,122,255,0.6), transparent 62%),
+    radial-gradient(32% 30% at 84% 8%, rgba(94,92,230,0.58), transparent 62%),
+    radial-gradient(32% 32% at 58% 44%, rgba(255,45,85,0.42), transparent 60%),
+    radial-gradient(32% 32% at 28% 64%, rgba(0,199,190,0.44), transparent 62%),
+    radial-gradient(34% 32% at 90% 80%, rgba(175,82,222,0.5), transparent 62%),
+    radial-gradient(32% 30% at 46% 98%, rgba(48,209,88,0.38), transparent 62%);
+  animation:drift 26s ease-in-out infinite;
+}
+@keyframes drift{
+  0%,100%{ transform:translate3d(0,0,0) scale(1.06); }
+  33%{ transform:translate3d(2.5%,-2%,0) scale(1.12); }
+  66%{ transform:translate3d(-2.5%,1.5%,0) scale(1.09); }
 }
 @media (prefers-color-scheme: dark){
   body::before{
     background:
-      radial-gradient(46% 40% at 14% 8%, rgba(10,132,255,0.4), transparent 60%),
-      radial-gradient(44% 38% at 88% 2%, rgba(125,122,255,0.34), transparent 62%),
-      radial-gradient(50% 42% at 98% 92%, rgba(255,55,95,0.26), transparent 64%),
-      radial-gradient(48% 40% at 4% 98%, rgba(48,209,88,0.22), transparent 64%);
+      radial-gradient(32% 30% at 16% 14%, rgba(10,132,255,0.6), transparent 62%),
+      radial-gradient(30% 28% at 84% 10%, rgba(125,122,255,0.55), transparent 62%),
+      radial-gradient(30% 30% at 58% 44%, rgba(255,55,95,0.4), transparent 60%),
+      radial-gradient(30% 30% at 30% 62%, rgba(0,199,190,0.4), transparent 62%),
+      radial-gradient(32% 30% at 88% 78%, rgba(191,90,242,0.5), transparent 62%),
+      radial-gradient(30% 28% at 48% 96%, rgba(48,209,88,0.34), transparent 62%);
   }
 }
 
@@ -110,9 +129,9 @@ code{ font-family:var(--mono); font-size:0.9em; color:var(--accent); background:
 
 /* Shared liquid-glass surface. */
 .glass{
-  background:var(--glass);
-  backdrop-filter:blur(var(--blur)) saturate(180%);
-  -webkit-backdrop-filter:blur(var(--blur)) saturate(180%);
+  background:var(--sheen), var(--glass);
+  backdrop-filter:var(--glass-filter);
+  -webkit-backdrop-filter:var(--glass-filter);
   box-shadow:
     inset 0 1px 0 var(--glass-hi),
     inset 0 0 0 1px var(--glass-edge),
@@ -129,9 +148,9 @@ header{
   display:flex; align-items:center; justify-content:space-between;
   gap:16px 20px; min-width:0;
   padding:10px 12px 10px 22px; border-radius:999px;
-  background:var(--glass);
-  backdrop-filter:blur(var(--blur)) saturate(180%);
-  -webkit-backdrop-filter:blur(var(--blur)) saturate(180%);
+  background:var(--sheen), var(--glass);
+  backdrop-filter:var(--glass-filter);
+  -webkit-backdrop-filter:var(--glass-filter);
   box-shadow:
     inset 0 1px 0 var(--glass-hi),
     inset 0 0 0 1px var(--glass-edge),
@@ -189,13 +208,14 @@ main{
 /* ── Panel: liquid-glass surface ─────────────────────────────────────── */
 .panel{ background:transparent; border-radius:var(--r-surface); }
 .panel-core{
-  background:var(--glass);
-  backdrop-filter:blur(var(--blur)) saturate(180%);
-  -webkit-backdrop-filter:blur(var(--blur)) saturate(180%);
+  background:var(--sheen), var(--glass);
+  backdrop-filter:var(--glass-filter);
+  -webkit-backdrop-filter:var(--glass-filter);
   border-radius:var(--r-surface);
   box-shadow:
     inset 0 1px 0 var(--glass-hi),
     inset 0 0 0 1px var(--glass-edge),
+    inset 0 -16px 30px -22px var(--glass-depth),
     0 0 0 1px var(--glass-ring),
     var(--glass-shadow);
   display:flex; flex-direction:column;
@@ -207,6 +227,7 @@ main{
   box-shadow:
     inset 0 1px 0 var(--glass-hi),
     inset 0 0 0 1px var(--glass-edge),
+    inset 0 -16px 30px -22px var(--glass-depth),
     0 0 0 1px var(--glass-ring),
     var(--glass-shadow-lift);
 }
