@@ -1,5 +1,29 @@
 # Decisions
 
+## [2026-07-30] Fix: background gradient now actually covers the full screen
+
+**Context:** The wallpaper only showed at the top of the screen; below the first
+panels it was flat/black.
+
+**Root cause:** the wallpaper is a `position: fixed; z-index:-1` `body::before`.
+`html,body { background: var(--wall) }` gave `<body>` an *opaque* background that
+painted over the negative-z-index pseudo-element, so only a sliver showed. Worse,
+Next's CSS optimizer kept folding a standalone `html { background }` rule back
+into `html,body { background }`, re-covering it.
+
+**Fix:** base color lives on `<html>` only; `<body>` is explicitly transparent
+(`background: transparent !important` in source — the optimizer strips the
+redundant value but the net result is a transparent body, verified in the built
+CSS). Also switched the wallpaper from `inset:-12%` (which pushed the bottom
+color-blobs below the viewport) to `inset:0` with a center-`scale` drift that
+never exposes a bare edge, and put strong color glows in all four corners so the
+whole viewport carries color. Verified by isolating the raw `body::before`: a
+full-screen mesh, top to bottom.
+
+**Files touched:** `app/globals.css`, `docs/DECISIONS.md`.
+
+---
+
 ## [2026-07-30] All six panels equal (3x2), full-screen background gradient
 
 **Context:** The two feature feeds (Tech Feed, Research Papers) spanned full
