@@ -1,5 +1,39 @@
 # Decisions
 
+## [2026-07-30] Bluesky via proxy, theme toggle, mobile responsiveness
+
+**Context:** Post-merge report of three issues: the Bluesky tech feed wasn't
+loading, there was no light/dark toggle (only system), and the layout wasn't
+mobile-responsive.
+
+**Bluesky:** it was called directly from the browser, but `public.api.bsky.app`
+does not send CORS headers for `searchPosts`, so the request was blocked. Moved
+it behind `/api/bsky` (a new proxy route) exactly like Reddit/GamerPower/arXiv,
+so the fetch is server-side (no CORS) with the public relay as a fallback. Only
+the cursor varies per page; `q=technology&sort=latest&limit=25` are fixed.
+
+**Theme toggle:** dark mode was driven purely by `@media (prefers-color-scheme:
+dark)`, which a button can't override. Switched dark to a `:root[data-theme=
+"dark"]` attribute (tokens + wallpaper), set before first paint by a tiny inline
+script in the layout (reads `localStorage['devpulse-theme']`, else the system
+setting — so it still follows the OS by default, and avoids a flash). A
+`ThemeToggle` button (sun/moon, Phosphor) in the header flips and persists it.
+
+**Mobile:** the header controls could overflow horizontally on narrow screens.
+Let `.island-right` wrap under 900px, and added a ≤480px breakpoint that tightens
+padding and panel height. Verified at 390px: no horizontal overflow, panels
+stack single-column, header wraps cleanly.
+
+**Verified:** build green; headless run confirms the tech feed renders via
+`/api/bsky`, the toggle flips `data-theme`/persists/repaints the whole UI, and
+mobile has zero horizontal overflow.
+
+**Files touched:** `app/api/[...proxy]/route.ts`, `lib/feeds.ts`,
+`app/globals.css`, `app/layout.tsx`, `components/Header.tsx`,
+`components/ThemeToggle.tsx` (new), `docs/DECISIONS.md`.
+
+---
+
 ## [2026-07-30] Fix: background gradient now actually covers the full screen
 
 **Context:** The wallpaper only showed at the top of the screen; below the first

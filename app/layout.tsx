@@ -19,8 +19,14 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Apply the saved (or system) theme before first paint to avoid a flash.
+  const themeScript = `(function(){try{var t=localStorage.getItem('devpulse-theme');if(t!=='light'&&t!=='dark'){t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme='light';}})();`;
+
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body>
         {/* SVG displacement filter powering the Liquid Glass refraction (referenced
             from CSS as url(#glass-distortion)). Visually hidden, present once. */}
