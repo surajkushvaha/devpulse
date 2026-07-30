@@ -1,5 +1,24 @@
 # Decisions
 
+## [2026-07-30] All six panels equal (3x2), full-screen background gradient
+
+**Context:** The two feature feeds (Tech Feed, Research Papers) spanned full
+width, which read as inconsistent — the user wanted all six panels uniform.
+
+**Decision:**
+- Dropped `wide: true` from the tech and papers sources, so all six panels are
+  regular cells: a clean uniform **3x2 bento** (HN | Reddit, GitHub | Games, Tech
+  | Papers), every panel the same 440px. The `.panel.wide` CSS is now unused but
+  left in place (harmless) in case a featured row is wanted again.
+- Added a **full-screen base gradient** beneath the color-blob mesh in
+  `body::before` (a soft diagonal blue → lavender → pink → mint in light, deep
+  navy → purple → ink in dark), so the whole viewport carries color, not just the
+  blob hotspots.
+
+**Files touched:** `lib/feeds.ts`, `app/globals.css`, `docs/CONTEXT.md`.
+
+---
+
 ## [2026-07-30] Uniform bento layout + SVG-displacement liquid glass
 
 **Context:** The 2x2 grid looked ragged — panels had different content heights,

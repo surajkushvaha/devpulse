@@ -3,8 +3,8 @@
 ## What it is
 
 A developer news dashboard: Hacker News, Reddit, GitHub trending, free game
-giveaways, a Bluesky tech feed, and arXiv research papers in six panels (the
-tech feed and research papers are full-width feature rows). A **Next.js** (App
+giveaways, a Bluesky tech feed, and arXiv research papers in six equal panels
+(a uniform 3x2 bento grid). A **Next.js** (App
 Router) + **React** + **TypeScript** app deployed on Vercel, with light and dark
 themes (`prefers-color-scheme`).
 

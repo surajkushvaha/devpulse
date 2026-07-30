@@ -115,7 +115,9 @@ body::before{
     radial-gradient(32% 32% at 58% 44%, rgba(255,45,85,0.42), transparent 60%),
     radial-gradient(32% 32% at 28% 64%, rgba(0,199,190,0.44), transparent 62%),
     radial-gradient(34% 32% at 90% 80%, rgba(175,82,222,0.5), transparent 62%),
-    radial-gradient(32% 30% at 46% 98%, rgba(48,209,88,0.38), transparent 62%);
+    radial-gradient(32% 30% at 46% 98%, rgba(48,209,88,0.38), transparent 62%),
+    /* full-screen base gradient under the color blobs */
+    linear-gradient(150deg, #dbe6ff 0%, #e9e2ff 42%, #ffe6f1 78%, #e2fbf4 100%);
   animation:drift 26s ease-in-out infinite;
 }
 @keyframes drift{
@@ -131,7 +133,9 @@ body::before{
       radial-gradient(30% 30% at 58% 44%, rgba(255,55,95,0.4), transparent 60%),
       radial-gradient(30% 30% at 30% 62%, rgba(0,199,190,0.4), transparent 62%),
       radial-gradient(32% 30% at 88% 78%, rgba(191,90,242,0.5), transparent 62%),
-      radial-gradient(30% 28% at 48% 96%, rgba(48,209,88,0.34), transparent 62%);
+      radial-gradient(30% 28% at 48% 96%, rgba(48,209,88,0.34), transparent 62%),
+      /* full-screen base gradient under the color blobs */
+      linear-gradient(150deg, #0b1226 0%, #100b22 44%, #170b1c 78%, #0a1420 100%);
   }
 }
 
