@@ -1,6 +1,6 @@
 # DevPulse — Personal Feed
 
-A lightweight web dashboard that aggregates developer news from five sources into
+A lightweight web dashboard that aggregates developer news from six sources into
 one page. Built with **Next.js** (App Router), **React**, and **TypeScript**,
 deployed on Vercel. An Apple-flavored **Liquid Glass** UI with the system (SF)
 font, light and dark themes (follows `prefers-color-scheme`).
@@ -12,17 +12,27 @@ font, light and dark themes (follows `prefers-color-scheme`).
 - **GitHub Trending** — Repositories trending this week
 - **Free Game Deals** — Free game giveaways, filterable by store (Steam, Epic,
   Xbox, PlayStation, GOG, PC)
+- **Tech Feed** — Latest technology posts from Bluesky (the open, twitter-style
+  network), with infinite scroll
 - **Research Papers** — Newest papers from arXiv, filterable by field (AI,
-  Machine Learning, Computer Vision, NLP, Systems, Robotics)
+  Machine Learning, Computer Vision, NLP, Systems, Robotics), with infinite scroll
+
+Every panel loads more as you scroll. Nothing is stored.
 
 Nothing is stored. Every request goes to the original source.
 
 ## How it works
 
-Hacker News and GitHub send CORS headers, so the browser calls them directly.
-Reddit, GamerPower, and arXiv don't, so they go through `/api/<source>` — a
-catch-all Next.js Route Handler (`app/api/[...proxy]/route.js`) that fetches
+Hacker News, GitHub, and Bluesky send CORS headers, so the browser calls them
+directly. Reddit, GamerPower, and arXiv don't, so they go through `/api/<source>`
+— a catch-all Next.js Route Handler (`app/api/[...proxy]/route.ts`) that fetches
 upstream and passes the bytes back. Responses are CDN-cached for 5 minutes.
+
+Infinite scroll: each panel pulls the next batch as you near the bottom (an
+`IntersectionObserver` sentinel). Hacker News fetches story details in batches,
+GitHub and arXiv page their APIs, Bluesky follows its cursor, and Free Game Deals
+shows every active giveaway (GamerPower returns them all at once, with no further
+pages to fetch).
 
 If `/api` ever fails, the affected panels fall back to a public CORS relay. The
 label next to each panel shows which one answered.
@@ -66,6 +76,7 @@ override, no env vars. The page is served statically from the CDN and
 - [GitHub API](https://api.github.com)
 - [GamerPower API](https://www.gamerpower.com/api)
 - [arXiv API](https://info.arxiv.org/help/api/index.html)
+- [Bluesky public API](https://docs.bsky.app/) (`public.api.bsky.app`, no auth)
 
 ## Notes
 

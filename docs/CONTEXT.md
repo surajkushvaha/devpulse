@@ -3,9 +3,10 @@
 ## What it is
 
 A developer news dashboard: Hacker News, Reddit, GitHub trending, free game
-giveaways, and arXiv research papers in five panels. A **Next.js** (App Router)
-+ **React** + **TypeScript** app deployed on Vercel, with light and dark themes
-(`prefers-color-scheme`).
+giveaways, a Bluesky tech feed, and arXiv research papers in six panels (the
+tech feed and research papers are full-width feature rows). A **Next.js** (App
+Router) + **React** + **TypeScript** app deployed on Vercel, with light and dark
+themes (`prefers-color-scheme`).
 
 The game and paper panels carry a row of filter chips (`.pill`). Picking one
 sets the panel's `filter` state and reloads just that panel — games by store
@@ -28,8 +29,13 @@ Working and deployable to Vercel (auto-detected framework, zero config).
 - `lib/feeds.ts` — typed source descriptors, upstream parsers, pager factories
 
 Data path for Reddit/GamerPower/arXiv: same-origin `/api/<source>` first, public
-CORS relay as fallback. Hacker News and GitHub are called directly from the
-browser.
+CORS relay as fallback. Hacker News, GitHub, and Bluesky are CORS-enabled and
+called directly from the browser (Bluesky via its no-auth public AppView).
+
+Infinite scroll everywhere: arXiv pages by `start` offset, Bluesky by cursor,
+GitHub by page, Hacker News by id batches. Free Game Deals is the one finite feed
+— GamerPower returns all active giveaways at once with no pagination, so the
+panel shows them all and simply stops.
 
 Dependencies: `next` / `react` / `react-dom` and `@phosphor-icons/react`. No web
 fonts — the UI uses the Apple system font stack (`-apple-system` → SF Pro on

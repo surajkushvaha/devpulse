@@ -1,5 +1,47 @@
 # Decisions
 
+## [2026-07-30] Bluesky tech feed, infinite-scroll papers, header fix
+
+**Context:** Add a "twitter feed" of latest tech updates, make the games and
+research-paper panels scroll infinitely, and fix the header.
+
+**Twitter → Bluesky:** X/Twitter has no free, unauthenticated public feed (the
+v2 API needs paid credentials, and Nitter is effectively dead), so a real Twitter
+feed isn't buildable without keys. Used **Bluesky** instead — the open,
+twitter-style network where the tech community is active. Its public AppView
+(`public.api.bsky.app/xrpc/app.bsky.feed.searchPosts`) needs no auth, is
+CORS-enabled (so the browser calls it directly), and paginates by cursor. Query
+is `q=technology&sort=latest`; the new **Tech Feed** panel is a full-width
+feature row alongside Research Papers.
+
+**Infinite scroll:**
+- **Research Papers** now pages arXiv for real — each `next()` fetches the next
+  `start`/`max_results` window and stops on a short page (the proxy `papers`
+  route gained a scrubbed `start` param). Previously it fetched 40 once and
+  stopped; now it's unbounded.
+- **Bluesky** pages by cursor — genuinely infinite.
+- **Free Game Deals** was asked for too, but GamerPower has no pagination: it
+  returns every active giveaway in one response. The panel already shows all of
+  them and scrolls; there is nothing further upstream to fetch, so it's left as
+  is (documented, not a regression).
+
+**Header fix:** aligned the island's `max-width` to the content grid (1160 → 1200)
+so its right edge lines up with the panels, and removed the `flex-wrap` that let
+the pill wrap to two lines at some widths — the mobile breakpoint (≤900px) still
+stacks it cleanly. Verified the island renders as a single 60px line.
+
+**Layout:** the bento is now four regular panels (2×2) above two full-width
+feature rows (Tech Feed, Research Papers) — no empty cells.
+
+**Verified:** `next build` green; headless run with Bluesky + paged arXiv stubbed
+shows the tech feed rendering, papers growing 25 → 58 cards on scroll, a
+single-line header, and no JS errors.
+
+**Files touched:** `lib/feeds.ts`, `app/api/[...proxy]/route.ts`,
+`app/globals.css`, `README.md`, `docs/CONTEXT.md`.
+
+---
+
 ## [2026-07-29] Apple design language: system font + Liquid Glass
 
 **Context:** Request to adopt a full Apple design system — Apple sans fonts and

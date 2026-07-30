@@ -123,11 +123,11 @@ code{ font-family:var(--mono); font-size:0.9em; color:var(--accent); background:
 /* ── Fluid Island header ─────────────────────────────────────────────── */
 header{
   position:sticky; top:18px; z-index:100;
-  max-width:1160px; margin:18px auto 0; padding:0 20px;
+  max-width:1200px; margin:18px auto 0; padding:0 20px;
 }
 .island{
   display:flex; align-items:center; justify-content:space-between;
-  gap:20px; flex-wrap:wrap;
+  gap:16px 20px; min-width:0;
   padding:10px 12px 10px 22px; border-radius:999px;
   background:var(--glass);
   backdrop-filter:blur(var(--blur)) saturate(180%);
@@ -153,8 +153,8 @@ header{
   color:var(--accent); background:var(--fill); padding:4px 9px; border-radius:999px;
 }
 
-.island-right{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
-.status{ font-size:12px; color:var(--label-2); display:flex; align-items:center; gap:9px; font-variant-numeric:tabular-nums; }
+.island-right{ display:flex; align-items:center; gap:14px; min-width:0; }
+.status{ font-size:12px; color:var(--label-2); display:flex; align-items:center; gap:9px; font-variant-numeric:tabular-nums; white-space:nowrap; }
 #clock{ color:var(--label); font-weight:600; }
 .sep-dot{ width:3px; height:3px; border-radius:50%; background:var(--label-3); }
 

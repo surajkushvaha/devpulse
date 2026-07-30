@@ -312,6 +312,57 @@ export const SOURCES: Source[] = [
     })
   },
   {
+    key: 'tech',
+    title: 'Tech Feed',
+    eyebrow: 'bluesky · #technology',
+    wide: true,
+    skeletonRows: 8,
+    emptyMessage: 'No posts found.',
+    error: { href: 'https://bsky.app/search?q=technology', label: 'Open Bluesky' },
+    async start() {
+      // Bluesky's public AppView needs no auth and paginates by cursor — a real
+      // twitter-style tech feed with genuine infinite scroll. It sends CORS
+      // headers, so the browser calls it directly (no proxy needed).
+      // (X/Twitter itself has no free, unauthenticated public feed; Bluesky is
+      // the open, twitter-style equivalent.)
+      const PAGE = 25;
+      const base =
+        'https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=' +
+        encodeURIComponent('technology') +
+        '&sort=latest&limit=' + PAGE;
+      let cursor: string | null = null;
+      let exhausted = false;
+      return async () => {
+        if (exhausted) return [];
+        const res = await fetch(base + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''));
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        const posts = Array.isArray(data.posts) ? data.posts : [];
+        cursor = data.cursor || null;
+        if (!cursor || posts.length === 0) exhausted = true;
+        return posts;
+      };
+    },
+    toCard: (post) => {
+      const a = post.author || {};
+      const rkey = (post.uri || '').split('/').pop();
+      const img =
+        post.embed?.images?.[0]?.thumb || a.avatar || null;
+      const stamp = Date.parse(post.record?.createdAt || post.indexedAt || '');
+      return {
+        href: a.handle && rkey ? `https://bsky.app/profile/${a.handle}/post/${rkey}` : 'https://bsky.app',
+        img,
+        letter: (a.displayName || a.handle || 'B')[0].toUpperCase(),
+        title: post.record?.text || '',
+        meta: [
+          a.handle ? '@' + a.handle : '',
+          (post.likeCount || 0) + ' likes',
+          timeAgo(Number.isFinite(stamp) ? Math.floor(stamp / 1000) : Math.floor(Date.now() / 1000))
+        ]
+      };
+    }
+  },
+  {
     key: 'papers',
     title: 'Research Papers',
     eyebrow: 'arXiv · newest first',
@@ -322,20 +373,27 @@ export const SOURCES: Source[] = [
     emptyMessage: 'No papers found for this category.',
     error: { href: 'https://arxiv.org/list/cs.AI/recent', label: 'Open arXiv' },
     async start(ctx, cat) {
-      // arXiv has real paging (start/max_results), but a category's newest 40 is
-      // plenty for a feed; fetch once and page through it client-side.
-      const r = await fetchProxied(
-        `/papers?cat=${cat}&limit=40`,
-        `https://export.arxiv.org/api/query?search_query=cat:${cat}&sortBy=submittedDate&sortOrder=descending&start=0&max_results=40`,
-        'text'
-      );
-      ctx.setVia(r.via);
-      const papers = parseArxiv(r.data);
-      let i = 0;
-      return () => {
-        const batch = papers.slice(i, i + 12);
-        i += 12;
-        return batch;
+      // True infinite scroll: arXiv supports real paging (start/max_results), so
+      // pull the next window on each call and stop when a short page comes back.
+      const PAGE = 25;
+      let start = 0;
+      let exhausted = false;
+      let first = true;
+      return async () => {
+        if (exhausted) return [];
+        const r = await fetchProxied(
+          `/papers?cat=${cat}&limit=${PAGE}&start=${start}`,
+          `https://export.arxiv.org/api/query?search_query=cat:${cat}&sortBy=submittedDate&sortOrder=descending&start=${start}&max_results=${PAGE}`,
+          'text'
+        );
+        if (first) {
+          ctx.setVia(r.via);
+          first = false;
+        }
+        const papers = parseArxiv(r.data);
+        start += PAGE;
+        if (papers.length < PAGE) exhausted = true;
+        return papers;
       };
     },
     toCard: (p: ArxivItem) => ({
