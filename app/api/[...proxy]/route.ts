@@ -47,6 +47,13 @@ const ROUTES: Record<string, (q: URLSearchParams) => [string, string]> = {
       '&sortBy=submittedDate&sortOrder=descending&start=' + clampStart(q.get('start')) +
       '&max_results=' + clamp(q.get('limit'), 25),
     'application/atom+xml; charset=utf-8'
+  ],
+  bsky: (q) => [
+    // Bluesky's public AppView. Calling it from the browser is blocked by CORS,
+    // so it goes server-side through here. Only the cursor varies per page.
+    'https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=technology&sort=latest&limit=25' +
+      (q.get('cursor') ? '&cursor=' + encodeURIComponent(q.get('cursor') as string) : ''),
+    'application/json; charset=utf-8'
   ]
 };
 

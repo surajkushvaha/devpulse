@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ArrowClockwise } from '@phosphor-icons/react';
+import ThemeToggle from './ThemeToggle';
 
 interface HeaderProps {
   lastSync: string | null;
@@ -47,6 +48,7 @@ export default function Header({ lastSync, autoOn, onRefreshAll, onToggleAuto }:
             <input type="checkbox" checked={autoOn} onChange={(e) => onToggleAuto(e.target.checked)} />
             auto 15m
           </label>
+          <ThemeToggle />
         </div>
       </div>
     </header>

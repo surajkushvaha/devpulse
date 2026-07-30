@@ -315,27 +315,30 @@ export const SOURCES: Source[] = [
     key: 'tech',
     title: 'Tech Feed',
     eyebrow: 'bluesky · #technology',
+    badge: true,
     skeletonRows: 8,
     emptyMessage: 'No posts found.',
     error: { href: 'https://bsky.app/search?q=technology', label: 'Open Bluesky' },
-    async start() {
-      // Bluesky's public AppView needs no auth and paginates by cursor — a real
-      // twitter-style tech feed with genuine infinite scroll. It sends CORS
-      // headers, so the browser calls it directly (no proxy needed).
+    async start(ctx) {
+      // Bluesky's public AppView is a real twitter-style tech feed with genuine
+      // infinite scroll (cursor paging). It does NOT send CORS headers for
+      // searchPosts, so the browser can't call it directly — it goes through
+      // /api like Reddit/GamerPower/arXiv, with the public relay as a fallback.
       // (X/Twitter itself has no free, unauthenticated public feed; Bluesky is
       // the open, twitter-style equivalent.)
-      const PAGE = 25;
-      const base =
-        'https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=' +
-        encodeURIComponent('technology') +
-        '&sort=latest&limit=' + PAGE;
+      const direct =
+        'https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=technology&sort=latest&limit=25';
       let cursor: string | null = null;
       let exhausted = false;
+      let first = true;
       return async () => {
         if (exhausted) return [];
-        const res = await fetch(base + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''));
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const data = await res.json();
+        const cq = cursor ? '&cursor=' + encodeURIComponent(cursor) : '';
+        const { data, via } = await fetchProxied('/bsky' + (cursor ? '?cursor=' + encodeURIComponent(cursor) : ''), direct + cq);
+        if (first) {
+          ctx.setVia(via);
+          first = false;
+        }
         const posts = Array.isArray(data.posts) ? data.posts : [];
         cursor = data.cursor || null;
         if (!cursor || posts.length === 0) exhausted = true;
